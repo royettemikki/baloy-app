@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Homeowner {
+  id                       String    @id @default(cuid())
+  email                    String    @unique
+  passwordHash             String?
+  fullName                 String
+  unit                     String
+  phoneNumber              String?
+  emergencyContact         String?
+  notifyEmailAnnouncements Boolean   @default(true)
+  notifyTextDuesReminders  Boolean   @default(true)
+  notifyElectionAlerts     Boolean   @default(false)
+  inviteToken              String?   @unique
+  invitedAt                DateTime?
+  joinedAt                 DateTime?
+  createdAt                DateTime  @default(now())
+  duesCharges              DuesCharge[]
+  payments                 Payment[]
+  votes                    Vote[]
+}
+
+enum ChargeStatus {
+  Due
+  Paid
+  Overdue
+}
+
+model DuesCharge {
+  id          Int          @id @default(autoincrement())
+  homeownerId String
+  homeowner   Homeowner    @relation(fields: [homeownerId], references: [id])
+  description String
+  amount      Decimal      @db.Decimal(10, 2)
+  dueDate     DateTime
+  status      ChargeStatus @default(Due)
+  payment     Payment?
+}
+
+model Payment {
+  id               Int        @id @default(autoincrement())
+  duesChargeId     Int        @unique
+  duesCharge       DuesCharge @relation(fields: [duesChargeId], references: [id])
+  homeownerId      String
+  homeowner        Homeowner  @relation(fields: [homeownerId], references: [id])
+  amountPaid       Decimal    @db.Decimal(10, 2)
+  paidAt           DateTime   @default(now())
+  receiptReference String?
+}
+
+enum AnnouncementTag {
+  Maintenance
+  Event
+  Safety
+  Board
+}
+
+model Announcement {
+  id        Int              @id @default(autoincrement())
+  title     String
+  body      String
+  tag       AnnouncementTag
+  pinned    Boolean          @default(false)
+  postedBy  String
+  postedAt  DateTime         @default(now())
+}
+
+model Election {
+  id        Int        @id @default(autoincrement())
+  title     String
+  opensAt   DateTime   @default(now())
+  closesAt  DateTime
+  positions Position[]
+}
+
+model Position {
+  id         Int         @id @default(autoincrement())
+  electionId Int
+  election   Election    @relation(fields: [electionId], references: [id])
+  title      String      // e.g. "President", "Treasurer"
+  seats      Int         @default(1)
+  candidates Candidate[]
+  votes      Vote[]
+}
+
+model Candidate {
+  id              Int      @id @default(autoincrement())
+  positionId      Int
+  position        Position @relation(fields: [positionId], references: [id])
+  name            String
+  roleDescription String
+  votes           Vote[]
+}
+
+model Vote {
+  id          Int       @id @default(autoincrement())
+  positionId  Int
+  position    Position  @relation(fields: [positionId], references: [id])
+  candidateId Int
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  homeownerId String
+  homeowner   Homeowner @relation(fields: [homeownerId], references: [id])
+  castAt      DateTime  @default(now())
+
+  @@unique([positionId, homeownerId])
+}

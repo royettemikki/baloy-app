@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  These variables are Millbrook Commons' theme (our one demo organization).
+  In the real product, these values come from the database per organization
+  and get rendered into a <style> tag based on the subdomain — see the
+  README for how that will plug in later.
+*/
+:root {
+  --brand: #0f6e56;
+  --brand-soft: #e1f5ee;
+  --brand-strong: #085041;
+  --on-brand: #ffffff;
+
+  --warning: #92610b;
+  --warning-soft: #fdf3e3;
+  --danger: #a32d2d;
+  --danger-soft: #fbeaea;
+  --purple: #3c3489;
+  --purple-soft: #eeedfe;
+  --coral: #712b13;
+  --coral-soft: #faece7;
+  --accent-warm: #7a4a0b;
+  --accent-warm-soft: #ffd9a0;
+
+  --ink: #14181f;
+  --ink-soft: #3b4a5a;
+  --ink-muted: #6b7280;
+  --surface: #ffffff;
+  --surface-muted: #f1f2f4;
+  --line: #e4e6ea;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
