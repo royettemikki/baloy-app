@@ -10,6 +10,7 @@ export default async function DuesPage() {
   const charges = await prisma.duesCharge.findMany({
     where: { homeownerId },
     orderBy: { dueDate: 'desc' },
+    include: { payments: { orderBy: { submittedAt: 'desc' }, take: 1 } },
   });
 
   const serialized = charges.map((c) => ({
@@ -18,6 +19,8 @@ export default async function DuesPage() {
     amount: Number(c.amount),
     dueDate: c.dueDate.toISOString(),
     status: c.status,
+    rejectionReason:
+      c.status === 'Rejected' ? (c.payments[0]?.rejectionReason ?? null) : null,
   }));
 
   const balance = serialized

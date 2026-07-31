@@ -181,7 +181,7 @@ export default function VoteWizard({
   const selected = selections[position.id];
 
   return (
-    <div className='flex flex-col h-full'>
+    <div key={stepIndex} className='flex flex-col h-full animate-fadeInUp'>
       <div className='flex-1'>
         <div className='flex items-center gap-2 mb-4'>
           {remaining.map((_, i) => (

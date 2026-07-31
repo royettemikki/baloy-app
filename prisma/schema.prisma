@@ -29,32 +29,43 @@ model Homeowner {
 
 enum ChargeStatus {
   Due
+  Pending
   Paid
+  Rejected
   Overdue
 }
 
+enum PaymentStatus {
+  Submitted
+  Confirmed
+  Rejected
+}
+
 model DuesCharge {
-  id          Int          @id @default(autoincrement())
-  homeownerId String
-  homeowner   Homeowner    @relation(fields: [homeownerId], references: [id])
-  description String
-  amount      Decimal      @db.Decimal(10, 2)
-  dueDate     DateTime
-  status      ChargeStatus @default(Due)
-  payment     Payment?
+  id              Int          @id @default(autoincrement())
+  homeownerId     String
+  homeowner       Homeowner    @relation(fields: [homeownerId], references: [id])
+  description     String
+  amount          Decimal      @db.Decimal(10, 2)
+  dueDate         DateTime
+  status          ChargeStatus @default(Due)
+  payments        Payment[]
 }
 
 model Payment {
-  id               Int        @id @default(autoincrement())
-  duesChargeId     Int        @unique
-  duesCharge       DuesCharge @relation(fields: [duesChargeId], references: [id])
+  id               Int           @id @default(autoincrement())
+  duesChargeId     Int
+  duesCharge       DuesCharge    @relation(fields: [duesChargeId], references: [id])
   homeownerId      String
-  homeowner        Homeowner  @relation(fields: [homeownerId], references: [id])
-  amountPaid       Decimal    @db.Decimal(10, 2)
-  paidAt           DateTime   @default(now())
+  homeowner        Homeowner     @relation(fields: [homeownerId], references: [id])
+  amountPaid       Decimal       @db.Decimal(10, 2)
+  submittedAt      DateTime      @default(now())
+  confirmedAt      DateTime?
   receiptReference String?
+  referenceNumber  String?
+  status           PaymentStatus @default(Submitted)
+  rejectionReason  String?
 }
-
 enum AnnouncementTag {
   Maintenance
   Event

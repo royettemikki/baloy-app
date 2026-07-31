@@ -8,6 +8,7 @@ import {
   IconShield,
   IconFileText,
 } from '@/components/Icons';
+import Link from 'next/link';
 
 const TAGS: AnnouncementTag[] = ['Maintenance', 'Event', 'Safety', 'Board'];
 
@@ -58,7 +59,7 @@ export default function NoticesList({
   );
 
   return (
-    <div>
+    <div className='animate-fadeInUp'>
       <h1 className='text-xl font-medium mb-3.5'>Notices</h1>
 
       <div className='flex gap-1.5 mb-4 overflow-x-auto pb-1'>
@@ -92,8 +93,9 @@ export default function NoticesList({
       )}
 
       {visible.map((a) => (
-        <div
+        <Link
           key={a.id}
+          href={`/notices/${a.id}`}
           className='flex gap-2.5 p-3.5 rounded-2xl mb-2.5 bg-surface-muted last:mb-0'
         >
           <div
@@ -102,9 +104,11 @@ export default function NoticesList({
             {TAG_STYLE[a.tag].icon}
           </div>
           <div className='flex-1'>
-            <p className='text-sm font-medium mb-0.5'>{a.title}</p>
+            <div className='flex items-center gap-1.5 mb-0.5'>
+              <p className='text-sm font-medium'>{a.title}</p>
+            </div>
             <p className='text-xs text-ink-soft mb-1.5 leading-relaxed'>
-              {a.body}
+              {a.body.length > 90 ? `${a.body.slice(0, 90)}…` : a.body}
             </p>
             <p className='text-[11px] text-ink-muted'>
               {a.postedBy} ·{' '}
@@ -114,7 +118,7 @@ export default function NoticesList({
               })}
             </p>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );

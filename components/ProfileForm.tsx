@@ -73,7 +73,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div>
+    <div className='animate-fadeInUp'>
       <div className='flex flex-col items-center text-center mb-[18px]'>
         <div className='w-16 h-16 rounded-full bg-accentwarm-soft flex items-center justify-center text-xl font-semibold text-accentwarm mb-2.5'>
           {initials}

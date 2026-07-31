@@ -45,3 +45,18 @@ body {
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }
+
+button {
+  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, new Edge */
+}

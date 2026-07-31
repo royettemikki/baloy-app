@@ -29,7 +29,10 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className='flex-1 px-6 py-6 overflow-y-auto'>
+    <form
+      onSubmit={handleSubmit}
+      className='flex-1 px-6 py-6 overflow-y-auto no-scrollbar'
+    >
       <p className='text-xs text-ink-muted text-center mb-4'>
         Sign in to your account
       </p>

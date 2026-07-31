@@ -51,9 +51,9 @@ export default async function HomePage() {
       }),
       prisma.election.findFirst({ where: { closesAt: { gt: new Date() } } }),
       prisma.payment.findMany({
-        where: { homeownerId },
+        where: { homeownerId, status: 'Confirmed' },
         include: { duesCharge: true },
-        orderBy: { paidAt: 'desc' },
+        orderBy: { submittedAt: 'desc' },
         take: 4,
       }),
       prisma.vote.findMany({
@@ -78,13 +78,16 @@ export default async function HomePage() {
   }
 
   const needsAttention = balance > 0 || (!!openElection && !alreadyVoted);
+  const currentMonth = new Date().toLocaleDateString(undefined, {
+    month: 'long',
+  });
 
   const activity = [
     ...payments.map((p) => ({
       id: `pay-${p.id}`,
       kind: 'pay' as const,
       text: `You paid ₱${Number(p.amountPaid).toFixed(2)} for ${p.duesCharge.description}`,
-      date: p.paidAt,
+      date: p.submittedAt,
     })),
     ...votes.map((v) => ({
       id: `vote-${v.id}`,
@@ -97,7 +100,7 @@ export default async function HomePage() {
     .slice(0, 4);
 
   return (
-    <div>
+    <div className='animate-fadeInUp'>
       <div className='flex items-center justify-between mb-4'>
         <div className='flex items-center gap-2.5'>
           <div className='w-9 h-9 rounded-full bg-accentwarm-soft flex items-center justify-center text-sm font-semibold text-accentwarm'>
@@ -105,25 +108,41 @@ export default async function HomePage() {
           </div>
           <div>
             <p className='text-sm text-ink-soft'>Hi {firstName} 👋</p>
-            <p className='text-xs text-ink-muted'>{organization.name}</p>
+            <p className='text-xs text-ink-muted'>
+              {organization.name} · Unit {(session?.user as any)?.unit}
+            </p>
           </div>
         </div>
-        <div className='w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center relative'>
+        <Link
+          href='/notices'
+          className='w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center relative'
+        >
           <IconBell width={16} height={16} className='text-ink-soft' />
-          <span className='absolute top-1.5 right-2 w-1.5 h-1.5 rounded-full bg-danger' />
-        </div>
+          {totalNotices > 0 && (
+            <span className='absolute top-1.5 right-2 w-1.5 h-1.5 rounded-full bg-danger' />
+          )}
+        </Link>
       </div>
 
       <div className='bg-brand rounded-2xl p-[18px] mb-3.5'>
         <p className='text-white text-base font-medium mb-2.5'>
           {needsAttention
             ? 'A few things need your attention'
-            : "You're all set for July 🎉"}
+            : `You're all set for ${currentMonth} 🎉`}
         </p>
         <div className='flex gap-1.5 flex-wrap'>
-          <span className='text-[11.5px] font-medium text-brand bg-white px-2.5 py-1 rounded-pill'>
-            {balance === 0 ? 'Dues paid' : `₱${balance.toFixed(2)} due`}
-          </span>
+          {balance === 0 ? (
+            <span className='text-[11.5px] font-medium text-brand bg-white px-2.5 py-1 rounded-pill'>
+              Dues paid
+            </span>
+          ) : (
+            <Link
+              href='/dues'
+              className='text-[11.5px] font-medium text-brand bg-white px-2.5 py-1 rounded-pill'
+            >
+              ₱{balance.toFixed(2)} due · Pay now
+            </Link>
+          )}
           {openElection && !alreadyVoted && (
             <span className='text-[11.5px] font-medium text-white bg-white/20 px-2.5 py-1 rounded-pill'>
               Vote open
@@ -164,8 +183,9 @@ export default async function HomePage() {
         <p className='text-sm text-ink-muted mb-4'>No notices yet.</p>
       )}
       {latest.map((a, i) => (
-        <div
+        <Link
           key={a.id}
+          href={`/notices/${a.id}`}
           className={`flex gap-2.5 py-3 ${i > 0 ? 'border-t border-line' : ''}`}
         >
           <div
@@ -177,7 +197,7 @@ export default async function HomePage() {
             <p className='text-[13.5px] font-medium mb-0.5'>{a.title}</p>
             <p className='text-xs text-ink-soft'>{a.body}</p>
           </div>
-        </div>
+        </Link>
       ))}
 
       {activity.length > 0 && (
