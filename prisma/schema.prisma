@@ -83,12 +83,22 @@ model Announcement {
   postedAt  DateTime         @default(now())
 }
 
+model Slate {
+  id         Int         @id @default(autoincrement())
+  electionId Int
+  election   Election    @relation(fields: [electionId], references: [id])
+  name       String
+  color      String
+  candidates Candidate[]
+}
+
 model Election {
   id        Int        @id @default(autoincrement())
   title     String
   opensAt   DateTime   @default(now())
   closesAt  DateTime
   positions Position[]
+  slates    Slate[]
 }
 
 model Position {
@@ -107,6 +117,12 @@ model Candidate {
   position        Position @relation(fields: [positionId], references: [id])
   name            String
   roleDescription String
+  photoUrl        String?
+  statement       String?
+  ballotNumber    Int      @default(1)
+  isIncumbent     Boolean  @default(false)
+  slateId         Int?
+  slate           Slate?   @relation(fields: [slateId], references: [id])
   votes           Vote[]
 }
 

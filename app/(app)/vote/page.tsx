@@ -12,7 +12,16 @@ export default async function VotePage() {
   const election = await prisma.election.findFirst({
     where: { closesAt: { gt: new Date() } },
     orderBy: { opensAt: 'desc' },
-    include: { positions: { include: { candidates: true } } },
+    include: {
+      positions: {
+        include: {
+          candidates: {
+            include: { slate: true },
+            orderBy: { ballotNumber: 'asc' },
+          },
+        },
+      },
+    },
   });
 
   if (!election) {
