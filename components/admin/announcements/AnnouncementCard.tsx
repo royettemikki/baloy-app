@@ -8,6 +8,7 @@ import { Announcement } from '@/types/announcement';
 import AnnouncementActionsMenu from './AnnouncementActionsMenu';
 import NoticePreviewModal from './NoticePreviewModal';
 import { IconEye } from '@/components/Icons';
+import { formatFullDate } from '@/lib/formatDate';
 
 function getScheduleStatus(a: Announcement) {
   const now = Date.now();
@@ -86,12 +87,7 @@ export default function AnnouncementCard({ announcement }: { announcement: Annou
       <p className="mb-1.5 text-sm font-medium">{announcement.title}</p>
       <p className="mb-3 text-sm leading-relaxed text-ink-soft">{announcement.body}</p>
       <p className="text-xs text-ink-muted">
-        {announcement.postedBy} ·{' '}
-        {new Date(announcement.postedAt).toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })}
+        {announcement.postedBy} · {formatFullDate(announcement.postedAt)}
       </p>
 
       {previewOpen && (

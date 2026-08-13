@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { confirmPaymentAction, rejectPaymentAction } from '@/app/actions/payments';
+import { formatShortDate } from '@/lib/formatDate';
 
 type PendingPayment = {
   id: number;
@@ -62,12 +63,7 @@ export default function PaymentRow({ payment }: { payment: PendingPayment }) {
 
       <div className="mb-3 flex items-center justify-between text-xs text-ink-muted">
         <span>Ref: {payment.referenceNumber || '—'}</span>
-        <span>
-          {new Date(payment.submittedAt).toLocaleDateString(undefined, {
-            month: 'short',
-            day: 'numeric',
-          })}
-        </span>
+        <span>{formatShortDate(payment.submittedAt)}</span>
       </div>
 
       {error && <p className="mb-2 text-xs text-danger">{error}</p>}

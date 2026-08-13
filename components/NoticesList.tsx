@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
 import { Announcement } from '@/types/announcement';
+import { formatShortDate } from '@/lib/formatDate';
 
 type ListAnnouncement = Pick<
   Announcement,
@@ -65,11 +66,7 @@ export default function NoticesList({ announcements }: { announcements: ListAnno
               {a.body.length > 90 ? `${a.body.slice(0, 90)}…` : a.body}
             </p>
             <p className="text-[11px] text-ink-muted">
-              {a.postedBy} ·{' '}
-              {new Date(a.postedAt).toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric',
-              })}
+              {a.postedBy} · {formatShortDate(a.postedAt)}
             </p>
           </div>
         </Link>

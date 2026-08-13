@@ -1,4 +1,5 @@
 import { IconCheck } from '@/components/Icons';
+import { formatLongDate } from '@/lib/formatDate';
 
 type Vote = {
   id: number;
@@ -22,36 +23,29 @@ export default function BallotSummary({
   );
 
   return (
-    <div className='animate-fadeInUp'>
-      <div className='flex flex-col items-center text-center mb-5'>
-        <div className='w-14 h-14 rounded-full bg-brand-soft flex items-center justify-center mb-3'>
-          <IconCheck width={24} height={24} className='text-brand' />
+    <div className="animate-fadeInUp">
+      <div className="mb-5 flex flex-col items-center text-center">
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft">
+          <IconCheck width={24} height={24} className="text-brand" />
         </div>
-        <p className='text-lg font-medium mb-1'>Ballot submitted</p>
-        <p className='text-xs text-ink-muted'>
-          Voted on{' '}
-          {submittedAt.toLocaleDateString(undefined, {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-          })}
-        </p>
+        <p className="mb-1 text-lg font-medium">Ballot submitted</p>
+        <p className="text-xs text-ink-muted">Voted on {formatLongDate(submittedAt)}</p>
       </div>
 
-      <p className='text-xs text-ink-muted uppercase tracking-wide font-medium mb-1.5'>
+      <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-muted">
         {electionTitle}
       </p>
 
       {votes.map((v) => (
-        <div key={v.id} className='border border-line rounded-2xl p-3.5 mb-2.5'>
-          <div className='flex items-center justify-between mb-2.5'>
-            <p className='text-xs text-ink-muted'>{v.position.title}</p>
-            <span className='text-[11px] font-medium text-brand-strong bg-brand-soft px-2 py-0.5 rounded-pill flex items-center gap-1'>
+        <div key={v.id} className="mb-2.5 rounded-2xl border border-line p-3.5">
+          <div className="mb-2.5 flex items-center justify-between">
+            <p className="text-xs text-ink-muted">{v.position.title}</p>
+            <span className="flex items-center gap-1 rounded-pill bg-brand-soft px-2 py-0.5 text-[11px] font-medium text-brand-strong">
               <IconCheck width={10} height={10} /> Voted
             </span>
           </div>
-          <div className='flex items-center gap-2.5'>
-            <div className='w-9 h-9 rounded-full bg-brand-soft text-brand-strong flex items-center justify-center text-[12.5px] font-semibold flex-shrink-0'>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-soft text-[12.5px] font-semibold text-brand-strong">
               {v.candidate.name
                 .split(' ')
                 .map((n) => n[0])
@@ -60,18 +54,16 @@ export default function BallotSummary({
                 .toUpperCase()}
             </div>
             <div>
-              <p className='text-sm font-medium'>{v.candidate.name}</p>
-              <p className='text-xs text-ink-soft'>
-                {v.candidate.roleDescription}
-              </p>
+              <p className="text-sm font-medium">{v.candidate.name}</p>
+              <p className="text-xs text-ink-soft">{v.candidate.roleDescription}</p>
             </div>
           </div>
         </div>
       ))}
 
-      <p className='text-xs text-ink-muted mt-2'>
+      <p className="mt-2 text-xs text-ink-muted">
         Results are shared after voting closes on{' '}
-        {closesAt.toLocaleDateString(undefined, {
+        {closesAt.toLocaleDateString('en-US', {
           month: 'long',
           day: 'numeric',
         })}

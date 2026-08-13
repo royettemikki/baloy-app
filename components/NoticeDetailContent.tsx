@@ -1,5 +1,6 @@
 import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
 import { Announcement } from '@/types/announcement';
+import { formatLongDate } from '@/lib/formatDate';
 
 type Props = {
   announcement: Pick<Announcement, 'title' | 'body' | 'tag' | 'postedBy' | 'postedAt' | 'imageUrl'>;
@@ -26,12 +27,7 @@ export default function NoticeDetailContent({ announcement }: Props) {
 
       <h1 className="mb-1.5 text-xl font-medium">{announcement.title}</h1>
       <p className="mb-4 text-xs text-ink-muted">
-        {announcement.postedBy} ·{' '}
-        {new Date(announcement.postedAt).toLocaleDateString(undefined, {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        })}
+        {announcement.postedBy} · {formatLongDate(announcement.postedAt)}
       </p>
       <p className="text-sm leading-relaxed text-ink-soft">{announcement.body}</p>
     </>

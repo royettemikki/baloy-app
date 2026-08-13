@@ -1,5 +1,5 @@
 'use client';
-
+import { formatShortDate, formatFullDate } from '@/lib/formatDate';
 import Link from 'next/link';
 
 type Charge = {
@@ -11,52 +11,36 @@ type Charge = {
   rejectionReason: string | null;
 };
 
-export default function DuesView({
-  charges,
-  balance,
-}: {
-  charges: Charge[];
-  balance: number;
-}) {
+export default function DuesView({ charges, balance }: { charges: Charge[]; balance: number }) {
   const nextDue = charges.find((c) => c.status === 'Due');
   const pending = charges.find((c) => c.status === 'Pending');
   const rejected = charges.find((c) => c.status === 'Rejected');
 
   return (
-    <div className='animate-fadeInUp'>
-      <h1 className='text-xl font-medium mb-3.5'>Dues</h1>
+    <div className="animate-fadeInUp">
+      <h1 className="mb-3.5 text-xl font-medium">Dues</h1>
 
-      <div className='bg-brand rounded-2xl p-[18px] mb-3.5'>
-        <p className='text-[12.5px] text-brand-soft mb-1'>Current balance</p>
-        <p className='text-3xl font-medium text-white mb-3.5'>
-          ₱{balance.toFixed(2)}
-        </p>
-        <div className='flex items-center justify-between'>
+      <div className="mb-3.5 rounded-2xl bg-brand p-[18px]">
+        <p className="mb-1 text-[12.5px] text-brand-soft">Current balance</p>
+        <p className="mb-3.5 text-3xl font-medium text-white">₱{balance.toFixed(2)}</p>
+        <div className="flex items-center justify-between">
           {rejected ? (
-            <p className='text-[13px] text-white'>
-              Payment couldn't be verified
-            </p>
+            <p className="text-[13px] text-white">Payment couldn't be verified</p>
           ) : nextDue ? (
             <div>
-              <p className='text-[11.5px] text-brand-soft'>Next charge</p>
-              <p className='text-[13px] text-white'>
-                ₱{nextDue.amount.toFixed(2)} on{' '}
-                {new Date(nextDue.dueDate).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                })}
+              <p className="text-[11.5px] text-brand-soft">Next charge</p>
+              <p className="text-[13px] text-white">
+                ₱{nextDue.amount.toFixed(2)} on {formatShortDate(nextDue.dueDate)}
               </p>
             </div>
           ) : pending ? (
-            <p className='text-[13px] text-white'>
-              Payment pending confirmation
-            </p>
+            <p className="text-[13px] text-white">Payment pending confirmation</p>
           ) : (
-            <p className='text-[13px] text-white'>All caught up</p>
+            <p className="text-[13px] text-white">All caught up</p>
           )}
           {(nextDue || rejected) && (
             <Link href={`/dues/pay?charge=${(nextDue ?? rejected)!.id}`}>
-              <button className='bg-white text-brand-strong text-[13px] font-medium px-4 py-2 rounded-xl'>
+              <button className="rounded-xl bg-white px-4 py-2 text-[13px] font-medium text-brand-strong">
                 {rejected ? 'Try again' : 'Pay now'}
               </button>
             </Link>
@@ -64,32 +48,24 @@ export default function DuesView({
         </div>
       </div>
 
-      <p className='text-sm font-medium text-ink-soft mb-2'>History</p>
+      <p className="mb-2 text-sm font-medium text-ink-soft">History</p>
 
       {charges.map((c) => (
-        <div key={c.id} className='py-2.5 border-t border-line'>
-          <div className='flex items-center justify-between'>
+        <div key={c.id} className="border-t border-line py-2.5">
+          <div className="flex items-center justify-between">
             <div>
-              <p className='text-[13.5px] font-medium mb-0.5'>
-                {c.description}
-              </p>
-              <p className='text-[11.5px] text-ink-muted'>
-                {new Date(c.dueDate).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
+              <p className="mb-0.5 text-[13.5px] font-medium">{c.description}</p>
+              <p className="text-[11.5px] text-ink-muted">{formatFullDate(c.dueDate)}</p>
             </div>
-            <div className='text-right'>
-              <p className='text-[13.5px] mb-0.5'>₱{c.amount.toFixed(2)}</p>
+            <div className="text-right">
+              <p className="mb-0.5 text-[13.5px]">₱{c.amount.toFixed(2)}</p>
               <span
-                className={`text-[10.5px] font-medium px-2 py-0.5 rounded-pill ${
+                className={`rounded-pill px-2 py-0.5 text-[10.5px] font-medium ${
                   c.status === 'Paid'
-                    ? 'text-brand-strong bg-brand-soft'
+                    ? 'bg-brand-soft text-brand-strong'
                     : c.status === 'Pending'
-                      ? 'text-warning bg-warning-soft'
-                      : 'text-danger bg-danger-soft'
+                      ? 'bg-warning-soft text-warning'
+                      : 'bg-danger-soft text-danger'
                 }`}
               >
                 {c.status}
@@ -97,7 +73,7 @@ export default function DuesView({
             </div>
           </div>
           {c.status === 'Rejected' && c.rejectionReason && (
-            <p className='text-xs text-danger mt-1.5'>{c.rejectionReason}</p>
+            <p className="mt-1.5 text-xs text-danger">{c.rejectionReason}</p>
           )}
         </div>
       ))}
