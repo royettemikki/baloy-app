@@ -1,12 +1,9 @@
 import Screen from '@/components/Screen';
 import BottomNav from '@/components/BottomNav';
-import Providers from './providers';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <Screen>
-      <div className='flex-1 px-5 pt-5 pb-2 overflow-y-auto no-scrollbar'>
-        <Providers>{children}</Providers>
-      </div>
+      <div className="no-scrollbar flex-1 overflow-y-auto px-5 pb-2 pt-5">{children}</div>
       <BottomNav />
     </Screen>
   );

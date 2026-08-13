@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
-import { updateProfileAction } from '@/app/actions';
+import { updateProfileAction } from '@/app/actions/profile';
 
 type Profile = {
   fullName: string;

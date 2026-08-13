@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import DuesView from '@/components/DuesView';
+import AutoRefresh from '@/components/AutoRefresh';
 
 export default async function DuesPage() {
   const session = await getServerSession(authOptions);
@@ -19,13 +20,17 @@ export default async function DuesPage() {
     amount: Number(c.amount),
     dueDate: c.dueDate.toISOString(),
     status: c.status,
-    rejectionReason:
-      c.status === 'Rejected' ? (c.payments[0]?.rejectionReason ?? null) : null,
+    rejectionReason: c.status === 'Rejected' ? (c.payments[0]?.rejectionReason ?? null) : null,
   }));
 
   const balance = serialized
     .filter((c) => c.status !== 'Paid')
     .reduce((sum, c) => sum + c.amount, 0);
 
-  return <DuesView charges={serialized} balance={balance} />;
+  return (
+    <>
+      <AutoRefresh />
+      <DuesView charges={serialized} balance={balance} />
+    </>
+  );
 }

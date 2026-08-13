@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import VoteWizard from '@/components/VoteWizard';
-import BallotSummary from '@/components/BallotSummary';
+import VoteWizard from '@/components/vote/VoteWizard';
+import BallotSummary from '@/components/vote/BallotSummary';
 import { IconBallot } from '@/components/Icons';
 
 export default async function VotePage() {

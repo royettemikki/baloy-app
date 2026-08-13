@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { claimInviteAction } from '@/app/actions';
+import { claimInviteAction } from '@/app/actions/invites';
 
 export default function RegisterForm({
   token,

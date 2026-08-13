@@ -1,42 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { AnnouncementTag } from '@/data/mock';
-import {
-  IconTool,
-  IconParty,
-  IconShield,
-  IconFileText,
-} from '@/components/Icons';
+import { ANNOUNCEMENT_TAGS, AnnouncementTag } from '@/constants/announcementTags';
+
 import Link from 'next/link';
 
 const TAGS: AnnouncementTag[] = ['Maintenance', 'Event', 'Safety', 'Board'];
-
-const TAG_STYLE: Record<
-  AnnouncementTag,
-  { bg: string; fg: string; icon: JSX.Element }
-> = {
-  Maintenance: {
-    bg: 'bg-brand-soft',
-    fg: 'text-brand-strong',
-    icon: <IconTool width={16} height={16} />,
-  },
-  Event: {
-    bg: 'bg-warning-soft',
-    fg: 'text-warning',
-    icon: <IconParty width={16} height={16} />,
-  },
-  Safety: {
-    bg: 'bg-danger-soft',
-    fg: 'text-danger',
-    icon: <IconShield width={16} height={16} />,
-  },
-  Board: {
-    bg: 'bg-surface-muted',
-    fg: 'text-ink-soft',
-    icon: <IconFileText width={16} height={16} />,
-  },
-};
 
 type Announcement = {
   id: number;
@@ -46,29 +15,22 @@ type Announcement = {
   pinned: boolean;
   postedBy: string;
   postedAt: string;
+  imageUrl: string | null;
 };
 
-export default function NoticesList({
-  announcements,
-}: {
-  announcements: Announcement[];
-}) {
+export default function NoticesList({ announcements }: { announcements: Announcement[] }) {
   const [filter, setFilter] = useState<AnnouncementTag | 'All'>('All');
-  const visible = announcements.filter(
-    (a) => filter === 'All' || a.tag === filter,
-  );
+  const visible = announcements.filter((a) => filter === 'All' || a.tag === filter);
 
   return (
-    <div className='animate-fadeInUp'>
-      <h1 className='text-xl font-medium mb-3.5'>Notices</h1>
+    <div className="animate-fadeInUp">
+      <h1 className="mb-3.5 text-xl font-medium">Notices</h1>
 
-      <div className='flex gap-1.5 mb-4 overflow-x-auto pb-1'>
+      <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
         <button
           onClick={() => setFilter('All')}
-          className={`text-xs font-medium px-3 py-1.5 rounded-pill whitespace-nowrap ${
-            filter === 'All'
-              ? 'bg-brand text-on-brand'
-              : 'bg-surface-muted text-ink-soft'
+          className={`whitespace-nowrap rounded-pill px-3 py-1.5 text-xs font-medium ${
+            filter === 'All' ? 'bg-brand text-on-brand' : 'bg-surface-muted text-ink-soft'
           }`}
         >
           All
@@ -77,10 +39,8 @@ export default function NoticesList({
           <button
             key={tag}
             onClick={() => setFilter(tag)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-pill whitespace-nowrap ${
-              filter === tag
-                ? 'bg-brand text-on-brand'
-                : 'bg-surface-muted text-ink-soft'
+            className={`whitespace-nowrap rounded-pill px-3 py-1.5 text-xs font-medium ${
+              filter === tag ? 'bg-brand text-on-brand' : 'bg-surface-muted text-ink-soft'
             }`}
           >
             {tag}
@@ -89,28 +49,28 @@ export default function NoticesList({
       </div>
 
       {visible.length === 0 && (
-        <p className='text-sm text-ink-muted'>Nothing in this category yet.</p>
+        <p className="text-sm text-ink-muted">Nothing in this category yet.</p>
       )}
 
       {visible.map((a) => (
         <Link
           key={a.id}
           href={`/notices/${a.id}`}
-          className='flex gap-2.5 p-3.5 rounded-2xl mb-2.5 bg-surface-muted last:mb-0'
+          className="mb-2.5 flex gap-2.5 rounded-2xl bg-surface-muted p-3.5 last:mb-0"
         >
           <div
-            className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${TAG_STYLE[a.tag].bg} ${TAG_STYLE[a.tag].fg}`}
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${ANNOUNCEMENT_TAGS[a.tag].bg} ${ANNOUNCEMENT_TAGS[a.tag].fg}`}
           >
-            {TAG_STYLE[a.tag].icon}
+            {ANNOUNCEMENT_TAGS[a.tag].icon}
           </div>
-          <div className='flex-1'>
-            <div className='flex items-center gap-1.5 mb-0.5'>
-              <p className='text-sm font-medium'>{a.title}</p>
+          <div className="flex-1">
+            <div className="mb-0.5 flex items-center gap-1.5">
+              <p className="text-sm font-medium">{a.title}</p>
             </div>
-            <p className='text-xs text-ink-soft mb-1.5 leading-relaxed'>
+            <p className="mb-1.5 text-xs leading-relaxed text-ink-soft">
               {a.body.length > 90 ? `${a.body.slice(0, 90)}…` : a.body}
             </p>
-            <p className='text-[11px] text-ink-muted'>
+            <p className="text-[11px] text-ink-muted">
               {a.postedBy} ·{' '}
               {new Date(a.postedAt).toLocaleDateString(undefined, {
                 month: 'short',

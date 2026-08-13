@@ -15,6 +15,7 @@ model Homeowner {
   unit                     String
   phoneNumber              String?
   emergencyContact         String?
+  isAdmin                  Boolean   @default(false)
   notifyEmailAnnouncements Boolean   @default(true)
   notifyTextDuesReminders  Boolean   @default(true)
   notifyElectionAlerts     Boolean   @default(false)
@@ -49,6 +50,7 @@ model DuesCharge {
   amount          Decimal      @db.Decimal(10, 2)
   dueDate         DateTime
   status          ChargeStatus @default(Due)
+  reminderSentAt  DateTime?
   payments        Payment[]
 }
 
@@ -81,6 +83,9 @@ model Announcement {
   pinned    Boolean          @default(false)
   postedBy  String
   postedAt  DateTime         @default(now())
+  imageUrl  String?
+  startsAt  DateTime?
+  expiresAt DateTime?
 }
 
 model Slate {

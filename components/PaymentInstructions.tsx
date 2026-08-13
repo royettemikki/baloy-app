@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { claimPaymentAction } from '@/app/actions';
+import { claimPaymentAction } from '@/app/actions/dues';
 
 type Method = 'gcash' | 'bank';
 

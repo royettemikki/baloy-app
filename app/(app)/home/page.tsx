@@ -13,19 +13,7 @@ import {
 } from '@/components/Icons';
 import { organization } from '@/data/mock';
 
-const TAG_ICON: Record<string, JSX.Element> = {
-  Maintenance: <IconTool width={16} height={16} />,
-  Event: <IconParty width={16} height={16} />,
-  Safety: <IconShield width={16} height={16} />,
-  Board: <IconFileText width={16} height={16} />,
-};
-
-const TAG_STYLE: Record<string, { bg: string; fg: string }> = {
-  Maintenance: { bg: 'bg-brand-soft', fg: 'text-brand-strong' },
-  Event: { bg: 'bg-warning-soft', fg: 'text-warning' },
-  Safety: { bg: 'bg-danger-soft', fg: 'text-danger' },
-  Board: { bg: 'bg-surface-muted', fg: 'text-ink-soft' },
-};
+import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
@@ -189,9 +177,9 @@ export default async function HomePage() {
           className={`flex gap-2.5 py-3 ${i > 0 ? 'border-t border-line' : ''}`}
         >
           <div
-            className={`w-[34px] h-[34px] rounded-lg flex items-center justify-center flex-shrink-0 ${TAG_STYLE[a.tag].bg} ${TAG_STYLE[a.tag].fg}`}
+            className={`w-[34px] h-[34px] rounded-lg flex items-center justify-center flex-shrink-0 ${ANNOUNCEMENT_TAGS[a.tag].bg} ${ANNOUNCEMENT_TAGS[a.tag].fg}`}
           >
-            {TAG_ICON[a.tag]}
+            {ANNOUNCEMENT_TAGS[a.tag].icon}
           </div>
           <div>
             <p className='text-[13.5px] font-medium mb-0.5'>{a.title}</p>
