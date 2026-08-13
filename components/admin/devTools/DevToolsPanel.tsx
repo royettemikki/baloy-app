@@ -136,7 +136,9 @@ function SmsTestSection() {
 
   useEffect(() => {
     listResidentsForSmsTestAction().then((result) => {
-      if ('homeowners' in result) setResidents(result.homeowners);
+      if ('success' in result && result.success) {
+        setResidents(result.homeowners ?? []);
+      }
     });
   }, []);
 
@@ -158,11 +160,11 @@ function SmsTestSection() {
     setOutcomes(null);
     startTransition(async () => {
       const result = await runReminderCheckNowAction();
-      if (result.error) {
-        setTestError(result.error);
-        return;
+      if ('success' in result && result.success) {
+        setOutcomes(result.outcomes ?? []);
+      } else if ('error' in result) {
+        setTestError(result.error ?? 'Something went wrong.');
       }
-      setOutcomes(result.outcomes);
     });
   }
 

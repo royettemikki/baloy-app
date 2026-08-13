@@ -4,6 +4,7 @@ import { IconCard, IconCheck, IconTrash } from '@/components/Icons';
 import PendingPaymentsQueue from '@/components/admin/payments/PendingPaymentsQueue';
 import PaymentHistoryRow from '@/components/admin/payments/PaymentHistoryRow';
 import AutoRefresh from '@/components/AutoRefresh';
+import { PaymentStatus } from '@prisma/client';
 
 const PAGE_SIZE = 8;
 
@@ -20,7 +21,7 @@ export default async function AdminPaymentsPage({
   const to = searchParams.to ? new Date(searchParams.to + 'T23:59:59') : null;
 
   const historyWhere = {
-    status: { in: ['Confirmed', 'Rejected'] as const },
+    status: { in: ['Confirmed', 'Rejected'] as PaymentStatus[] },
     ...(from || to
       ? { submittedAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
       : {}),

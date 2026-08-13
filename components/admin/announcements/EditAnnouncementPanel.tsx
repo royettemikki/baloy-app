@@ -2,19 +2,7 @@
 
 import AnnouncementForm from './AnnouncementForm';
 import { IconX } from '@/components/Icons';
-import { AnnouncementTag } from '@/constants/announcementTags';
-
-type Announcement = {
-  id: number;
-  title: string;
-  body: string;
-  tag: AnnouncementTag;
-  pinned: boolean;
-  postedBy: string;
-  imageUrl: string | null;
-  startsAt: string | null;
-  expiresAt: string | null;
-};
+import { Announcement } from '@/types/announcement';
 
 export default function EditAnnouncementPanel({
   announcement,

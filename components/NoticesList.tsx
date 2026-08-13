@@ -1,29 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { ANNOUNCEMENT_TAGS, AnnouncementTag } from '@/constants/announcementTags';
-
 import Link from 'next/link';
+import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
+import { Announcement } from '@/types/announcement';
 
-const TAGS: AnnouncementTag[] = ['Maintenance', 'Event', 'Safety', 'Board'];
+type ListAnnouncement = Pick<
+  Announcement,
+  'id' | 'title' | 'body' | 'tag' | 'pinned' | 'postedBy' | 'postedAt'
+>;
 
-type Announcement = {
-  id: number;
-  title: string;
-  body: string;
-  tag: AnnouncementTag;
-  pinned: boolean;
-  postedBy: string;
-  postedAt: string;
-  imageUrl: string | null;
-};
+const TAGS: Array<ListAnnouncement['tag']> = ['Maintenance', 'Event', 'Safety', 'Board'];
 
-export default function NoticesList({ announcements }: { announcements: Announcement[] }) {
-  const [filter, setFilter] = useState<AnnouncementTag | 'All'>('All');
+export default function NoticesList({ announcements }: { announcements: ListAnnouncement[] }) {
+  const [filter, setFilter] = useState<ListAnnouncement['tag'] | 'All'>('All');
   const visible = announcements.filter((a) => filter === 'All' || a.tag === filter);
 
   return (
-    <div className="animate-fadeInUp">
+    <div>
       <h1 className="mb-3.5 text-xl font-medium">Notices</h1>
 
       <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import CopyInviteLink from './CopyInviteLink';
 import EditResidentPanel from './EditResidentPanel';
 import { toggleAdminAction, resendInviteAction, revokeInviteAction } from '@/app/actions/admin';
+import { useFlipMenu } from '@/hooks/useFlipMenu';
 import { IconDots, IconEdit, IconUser, IconRefresh, IconTrash } from '@/components/Icons';
 import { Resident } from '@/types/resident';
-import { useFlipMenu } from '@/hooks/useFlipMenu';
 
 export default function ResidentActionsMenu({
   homeowner,
@@ -16,6 +16,7 @@ export default function ResidentActionsMenu({
   homeowner: Resident;
   currentAdminId: string;
 }) {
+  const { buttonRef, menuOpen, menuStyle, toggleMenu, closeMenu: closeMenuBase } = useFlipMenu();
   const [editing, setEditing] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const [freshToken, setFreshToken] = useState<string | null>(null);
@@ -26,8 +27,6 @@ export default function ResidentActionsMenu({
   const isSelf = homeowner.id === currentAdminId;
   const isPending = !homeowner.passwordHash;
 
-  const { buttonRef, menuOpen, menuStyle, toggleMenu, closeMenu: closeMenuBase } = useFlipMenu();
-
   function closeMenu() {
     closeMenuBase();
     setConfirmingRevoke(false);
@@ -35,7 +34,7 @@ export default function ResidentActionsMenu({
   }
 
   function handleToggleAdmin() {
-    setMenuOpen(false);
+    closeMenu();
     setError(null);
     startTransition(async () => {
       const result = await toggleAdminAction(homeowner.id);
@@ -69,7 +68,7 @@ export default function ResidentActionsMenu({
         setConfirmingRevoke(false);
         return;
       }
-      setMenuOpen(false);
+      closeMenu();
       router.refresh();
     });
   }
@@ -79,7 +78,7 @@ export default function ResidentActionsMenu({
       <div className="relative inline-block">
         <button
           ref={buttonRef}
-          onClick={() => (menuOpen ? closeMenu() : openMenu())} with onClick={toggleMenu}
+          onClick={toggleMenu}
           className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-surface-muted"
         >
           <IconDots width={16} height={16} className="text-ink-soft" />
@@ -123,7 +122,7 @@ export default function ResidentActionsMenu({
                   <button
                     onClick={() => {
                       setEditing(true);
-                      setMenuOpen(false);
+                      closeMenu();
                     }}
                     className="flex w-full items-center gap-2 px-3.5 py-2 text-sm hover:bg-surface-muted"
                   >

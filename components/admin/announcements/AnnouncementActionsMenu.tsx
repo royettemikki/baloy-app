@@ -6,16 +6,7 @@ import EditAnnouncementPanel from './EditAnnouncementPanel';
 import { deleteAnnouncementAction } from '@/app/actions/announcements';
 import { useFlipMenu } from '@/hooks/useFlipMenu';
 import { IconDots, IconEdit, IconTrash } from '@/components/Icons';
-import { AnnouncementTag } from '@/constants/announcementTags';
-
-type Announcement = {
-  id: number;
-  title: string;
-  body: string;
-  tag: AnnouncementTag;
-  pinned: boolean;
-  postedBy: string;
-};
+import { Announcement } from '@/types/announcement';
 
 export default function AnnouncementActionsMenu({ announcement }: { announcement: Announcement }) {
   const { buttonRef, menuOpen, menuStyle, toggleMenu, closeMenu: closeMenuBase } = useFlipMenu();

@@ -1,21 +1,17 @@
 import NoticeDetailContent from '@/components/NoticeDetailContent';
-import { AnnouncementTag } from '@/constants/announcementTags';
+import { Announcement } from '@/types/announcement';
 import { IconX } from '@/components/Icons';
 
-type Announcement = {
-  title: string;
-  body: string;
-  tag: AnnouncementTag;
-  postedBy: string;
-  postedAt: string;
-  imageUrl: string | null;
-};
+type PreviewAnnouncement = Pick<
+  Announcement,
+  'title' | 'body' | 'tag' | 'postedBy' | 'postedAt' | 'imageUrl'
+>;
 
 export default function NoticePreviewModal({
   announcement,
   onClose,
 }: {
-  announcement: Announcement;
+  announcement: PreviewAnnouncement;
   onClose: () => void;
 }) {
   return (

@@ -3,16 +3,7 @@
 import { useState } from 'react';
 import AnnouncementCard from './AnnouncementCard';
 import { ANNOUNCEMENT_TAGS, AnnouncementTag } from '@/constants/announcementTags';
-
-type Announcement = {
-  id: number;
-  title: string;
-  body: string;
-  tag: AnnouncementTag;
-  pinned: boolean;
-  postedBy: string;
-  postedAt: string;
-};
+import { Announcement } from '@/types/announcement';
 
 export default function AnnouncementsList({ announcements }: { announcements: Announcement[] }) {
   const [query, setQuery] = useState('');

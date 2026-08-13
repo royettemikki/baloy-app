@@ -1,15 +1,11 @@
-import { ANNOUNCEMENT_TAGS, AnnouncementTag } from '@/constants/announcementTags';
+import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
+import { Announcement } from '@/types/announcement';
 
-type Announcement = {
-  title: string;
-  body: string;
-  tag: AnnouncementTag;
-  postedBy: string;
-  postedAt: string;
-  imageUrl?: string | null;
+type Props = {
+  announcement: Pick<Announcement, 'title' | 'body' | 'tag' | 'postedBy' | 'postedAt' | 'imageUrl'>;
 };
 
-export default function NoticeDetailContent({ announcement }: { announcement: Announcement }) {
+export default function NoticeDetailContent({ announcement }: Props) {
   const tagStyle = ANNOUNCEMENT_TAGS[announcement.tag];
 
   return (

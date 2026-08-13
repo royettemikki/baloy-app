@@ -3,23 +3,11 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { togglePinAction } from '@/app/actions/announcements';
-import { ANNOUNCEMENT_TAGS, AnnouncementTag } from '@/constants/announcementTags';
+import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
+import { Announcement } from '@/types/announcement';
 import AnnouncementActionsMenu from './AnnouncementActionsMenu';
 import NoticePreviewModal from './NoticePreviewModal';
 import { IconEye } from '@/components/Icons';
-
-type Announcement = {
-  id: number;
-  title: string;
-  body: string;
-  tag: AnnouncementTag;
-  pinned: boolean;
-  postedBy: string;
-  postedAt: string;
-  imageUrl: string | null;
-  startsAt: string | null;
-  expiresAt: string | null;
-};
 
 function getScheduleStatus(a: Announcement) {
   const now = Date.now();
@@ -63,7 +51,7 @@ export default function AnnouncementCard({ announcement }: { announcement: Annou
         )}
         <div className="absolute inset-0 flex items-center justify-center bg-black/10">
           <span className="flex items-center gap-1.5 rounded-lg bg-black/50 px-3 py-1.5 text-xs font-medium text-white">
-            <IconEye width={14} height={14} /> Preview
+            <IconEye width={14} height={14} /> Preview notice
           </span>
         </div>
       </button>
