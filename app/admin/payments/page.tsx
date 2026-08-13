@@ -94,7 +94,7 @@ export default async function AdminPaymentsPage({
         Confirm or reject payments residents have submitted.
       </p>
 
-      <div className="mb-8 grid grid-cols-3 gap-4">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
           <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-warning-soft">
             <IconCard width={18} height={18} className="text-warning" />
@@ -174,7 +174,7 @@ export default async function AdminPaymentsPage({
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-line bg-surface-muted px-5 py-3 text-sm">
+          <div className="flex flex-col gap-2 border-t border-line bg-surface-muted px-5 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="text-ink-muted">
               Page {page} of {totalPages} · {historyTotal} total
             </p>

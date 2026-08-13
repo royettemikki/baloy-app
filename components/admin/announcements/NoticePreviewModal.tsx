@@ -22,7 +22,7 @@ export default function NoticePreviewModal({
       <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center">
         <p className="mb-3 text-xs text-white/70">This is what residents will see on their phone</p>
 
-        <div className="no-scrollbar max-h-[80vh] min-h-[600px] w-[340px] overflow-y-auto rounded-[32px] border-4 border-ink bg-surface p-5">
+        <div className="no-scrollbar max-h-[80vh] min-h-[600px] w-[340px] max-w-[88vw] overflow-y-auto rounded-[32px] border-4 border-ink bg-surface p-5">
           <p className="mb-4 text-sm font-medium text-brand">← Notices</p>
           <NoticeDetailContent announcement={announcement} />
         </div>

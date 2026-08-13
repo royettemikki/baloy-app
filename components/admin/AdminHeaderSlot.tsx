@@ -11,7 +11,19 @@ const TITLES: Record<string, string> = {
   '/admin/dev-tools': 'Dev Tools',
 };
 
-export default function AdminHeaderSlot({ fullName }: { fullName: string }) {
+export default function AdminHeaderSlot({
+  fullName,
+  onMenuClick,
+}: {
+  fullName: string;
+  onMenuClick: () => void;
+}) {
   const pathname = usePathname();
-  return <AdminHeader title={TITLES[pathname] ?? 'Admin'} fullName={fullName} />;
+  return (
+    <AdminHeader
+      title={TITLES[pathname] ?? 'Admin'}
+      fullName={fullName}
+      onMenuClick={onMenuClick}
+    />
+  );
 }
