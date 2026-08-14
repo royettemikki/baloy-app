@@ -11,7 +11,6 @@ type PendingPayment = {
   referenceNumber: string | null;
   submittedAt: string;
   homeowner: { fullName: string; unit: string; email: string };
-  duesCharge: { description: string };
 };
 
 export default function PaymentRow({ payment }: { payment: PendingPayment }) {
@@ -46,7 +45,7 @@ export default function PaymentRow({ payment }: { payment: PendingPayment }) {
   }
 
   return (
-    <div className="rounded-xl bg-surface-muted p-4">
+    <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
       <div className="mb-2 flex items-start justify-between">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{payment.homeowner.fullName}</p>
@@ -58,8 +57,6 @@ export default function PaymentRow({ payment }: { payment: PendingPayment }) {
           ₱{payment.amountPaid.toFixed(2)}
         </p>
       </div>
-
-      <p className="mb-2 text-sm text-ink-soft">{payment.duesCharge.description}</p>
 
       <div className="mb-3 flex items-center justify-between text-xs text-ink-muted">
         <span>Ref: {payment.referenceNumber || '—'}</span>

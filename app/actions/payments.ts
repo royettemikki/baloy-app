@@ -12,13 +12,53 @@ export async function confirmPaymentAction(paymentId: number) {
   if (!payment) return { error: 'Payment not found.' };
   if (payment.status !== 'Submitted') return { error: 'This payment has already been reviewed.' };
 
-  await prisma.$transaction([
-    prisma.payment.update({
+  await prisma.$transaction(async (tx) => {
+    const homeowner = await tx.homeowner.findUniqueOrThrow({ where: { id: payment.homeownerId } });
+    let pool = Number(payment.amountPaid) + Number(homeowner.creditBalance);
+    const allocations: string[] = [];
+
+    const openCharges = await tx.duesCharge.findMany({
+      where: { homeownerId: payment.homeownerId, status: { in: ['Due', 'Overdue'] } },
+      orderBy: { dueDate: 'asc' },
+    });
+
+    for (const charge of openCharges) {
+      if (pool <= 0) break;
+      const owed = Number(charge.amount) - Number(charge.amountPaid);
+      if (owed <= 0) continue;
+
+      const applied = Math.min(pool, owed);
+      const newAmountPaid = Number(charge.amountPaid) + applied;
+      const newStatus =
+        newAmountPaid >= Number(charge.amount)
+          ? 'Paid'
+          : charge.dueDate < new Date()
+            ? 'Overdue'
+            : 'Due';
+
+      await tx.duesCharge.update({
+        where: { id: charge.id },
+        data: { amountPaid: newAmountPaid, status: newStatus },
+      });
+      allocations.push(`${charge.description}: ₱${applied.toFixed(2)}`);
+      pool -= applied;
+    }
+
+    await tx.payment.update({
       where: { id: paymentId },
-      data: { status: 'Confirmed', confirmedAt: new Date() },
-    }),
-    prisma.duesCharge.update({ where: { id: payment.duesChargeId }, data: { status: 'Paid' } }),
-  ]);
+      data: {
+        status: 'Confirmed',
+        confirmedAt: new Date(),
+        allocationSummary:
+          allocations.length > 0 ? allocations.join(', ') : 'Applied as account credit',
+      },
+    });
+
+    await tx.homeowner.update({
+      where: { id: payment.homeownerId },
+      data: { creditBalance: pool },
+    });
+  });
 
   revalidatePath('/admin/payments');
   revalidatePath('/home');
@@ -35,13 +75,10 @@ export async function rejectPaymentAction(paymentId: number, reason: string) {
   if (!payment) return { error: 'Payment not found.' };
   if (payment.status !== 'Submitted') return { error: 'This payment has already been reviewed.' };
 
-  await prisma.$transaction([
-    prisma.payment.update({
-      where: { id: paymentId },
-      data: { status: 'Rejected', rejectionReason: reason },
-    }),
-    prisma.duesCharge.update({ where: { id: payment.duesChargeId }, data: { status: 'Rejected' } }),
-  ]);
+  await prisma.payment.update({
+    where: { id: paymentId },
+    data: { status: 'Rejected', rejectionReason: reason },
+  });
 
   revalidatePath('/admin/payments');
   revalidatePath('/home');

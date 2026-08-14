@@ -12,6 +12,7 @@ import {
   runReminderCheckNowAction,
 } from '@/app/actions/devTools';
 import { ReminderOutcome } from '@/lib/duesReminders';
+import { runLateFeeCheckNowAction } from '@/app/actions/devTools';
 
 type ToolKey = 'election' | 'announcements' | 'duesAdd' | 'duesReset';
 
@@ -261,6 +262,56 @@ function SmsTestSection() {
   );
 }
 
+function LateFeeTestSection() {
+  const [outcomes, setOutcomes] = useState<
+    { homeownerName: string; chargeDescription: string; feeAmount: number }[] | null
+  >(null);
+  const [pending, startTransition] = useTransition();
+
+  function handleRun() {
+    setOutcomes(null);
+    startTransition(async () => {
+      const result = await runLateFeeCheckNowAction();
+      if ('outcomes' in result) setOutcomes(result.outcomes ?? []);
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
+      <p className="mb-1 text-sm font-medium">Run the late fee check now</p>
+      <p className="mb-3 text-xs text-ink-soft">
+        Finds every charge past its due date with no fee applied yet, adds the configured late fee,
+        and marks the original charge Overdue.
+      </p>
+      <button
+        onClick={handleRun}
+        disabled={pending}
+        className="mb-3 rounded-lg border border-line px-4 py-2 text-xs font-medium text-brand"
+      >
+        {pending ? 'Running…' : 'Run check'}
+      </button>
+      {outcomes && (
+        <div className="flex flex-col gap-1.5">
+          {outcomes.length === 0 && (
+            <p className="text-xs text-ink-muted">Nothing overdue right now.</p>
+          )}
+          {outcomes.map((o, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-lg bg-surface-muted px-3 py-2 text-xs"
+            >
+              <span>
+                {o.homeownerName} — {o.chargeDescription}
+              </span>
+              <span className="font-medium text-danger">+₱{o.feeAmount.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DevToolsPanel() {
   return (
     <div className="flex flex-col gap-8">
@@ -271,6 +322,10 @@ export default function DevToolsPanel() {
       <div>
         <p className="mb-3 text-sm font-medium text-ink-soft">Seed data</p>
         <SeedToolsSection />
+      </div>
+      <div>
+        <p className="mb-3 text-sm font-medium text-ink-soft">Late fees</p>
+        <LateFeeTestSection />
       </div>
     </div>
   );

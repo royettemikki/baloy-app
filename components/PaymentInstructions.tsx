@@ -6,17 +6,10 @@ import { claimPaymentAction } from '@/app/actions/dues';
 
 type Method = 'gcash' | 'bank';
 
-export default function PaymentInstructions({
-  chargeId,
-  description,
-  amount,
-}: {
-  chargeId: number;
-  description: string;
-  amount: number;
-}) {
+export default function PaymentInstructions({ remainingAmount }: { remainingAmount: number }) {
   const [method, setMethod] = useState<Method>('gcash');
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [amountPaid, setAmountPaid] = useState(remainingAmount.toFixed(2));
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -27,9 +20,14 @@ export default function PaymentInstructions({
       setError('Please enter your reference or transaction number.');
       return;
     }
+    const parsedAmount = parseFloat(amountPaid);
+    if (!parsedAmount || parsedAmount <= 0) {
+      setError('Please enter a valid amount.');
+      return;
+    }
     setError(null);
     startTransition(async () => {
-      const result = await claimPaymentAction(chargeId, referenceNumber);
+      const result = await claimPaymentAction(referenceNumber, parsedAmount);
       if (result.error) {
         setError(result.error);
         return;
@@ -41,18 +39,18 @@ export default function PaymentInstructions({
 
   if (submitted) {
     return (
-      <div className='flex flex-col items-center text-center px-4 py-10'>
-        <div className='w-14 h-14 rounded-full bg-warning-soft flex items-center justify-center mb-4'>
-          <span className='text-2xl'>⏳</span>
+      <div className="flex flex-col items-center px-4 py-10 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-warning-soft">
+          <span className="text-2xl">⏳</span>
         </div>
-        <p className='text-lg font-medium mb-1.5'>Payment submitted</p>
-        <p className='text-sm text-ink-soft leading-relaxed mb-6'>
-          We've noted your payment for {description}. It'll show as pending
-          until the board confirms it against their records.
+        <p className="mb-1.5 text-lg font-medium">Payment submitted</p>
+        <p className="mb-6 text-sm leading-relaxed text-ink-soft">
+          We've noted your payment. It'll show as pending until the board confirms it against their
+          records.
         </p>
         <button
           onClick={() => router.push('/dues')}
-          className='w-full bg-brand text-on-brand rounded-xl py-3.5 text-sm font-medium'
+          className="w-full rounded-xl bg-brand py-3.5 text-sm font-medium text-on-brand"
         >
           Back to Dues
         </button>
@@ -62,117 +60,104 @@ export default function PaymentInstructions({
 
   return (
     <div>
-      <p className='text-xs text-ink-muted mb-0.5'>Pay for</p>
-      <h1 className='text-xl font-medium mb-1'>{description}</h1>
-      <p className='text-2xl font-medium text-brand mb-5'>
-        ₱{amount.toFixed(2)}
-      </p>
+      <p className="mb-0.5 text-xs text-ink-muted">Pay your balance</p>
+      <h1 className="mb-1 text-xl font-medium">Millbrook Commons dues</h1>
+      <p className="mb-5 text-2xl font-medium text-brand">₱{remainingAmount.toFixed(2)} total</p>
 
-      {/* GCash option */}
-      <div className='border border-line rounded-2xl mb-2.5 overflow-hidden'>
+      <div className="mb-2.5 overflow-hidden rounded-2xl border border-line">
         <button
           onClick={() => setMethod('gcash')}
-          className='w-full flex items-center gap-3 p-4 text-left'
+          className="flex w-full items-center gap-3 p-4 text-left"
         >
           <div
-            className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-              method === 'gcash'
-                ? 'border-[5px] border-brand'
-                : 'border border-line'
-            }`}
+            className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${method === 'gcash' ? 'border-[5px] border-brand' : 'border border-line'}`}
           />
-          <img
-            src='/gcash-logo.png'
-            alt='GCash'
-            className='h-7 flex-shrink-0'
-          />
-          <span className='text-sm font-medium flex-1'>Pay via GCash</span>
+          <img src="/gcash-logo.png" alt="GCash" className="h-5 flex-shrink-0" />
+          <span className="flex-1 text-sm font-medium">Pay via GCash</span>
         </button>
-
         {method === 'gcash' && (
-          <div className='px-4 pb-4 animate-fadeInUp'>
-            <div className='w-full aspect-square bg-surface-muted rounded-xl flex items-center justify-center mb-3 overflow-hidden'>
+          <div className="animate-fadeInUp px-4 pb-4">
+            <div className="mb-3 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-surface-muted">
               <img
-                src='/gcash-qr.png'
-                alt='GCash QR code'
-                className='w-full h-full object-contain'
+                src="/gcash-qr.png"
+                alt="GCash QR code"
+                className="h-full w-full object-contain"
               />
             </div>
             <a
-              href='/gcash-qr.png'
-              download='gcash-payment-qr.png'
-              className='block text-center text-xs font-medium text-brand mb-3'
+              href="/gcash-qr.png"
+              download="gcash-payment-qr.png"
+              className="mb-3 block text-center text-xs font-medium text-brand"
             >
               Download QR code
             </a>
-            <p className='text-xs text-ink-soft'>
-              GCash number: <span className='font-medium'>0917 000 0000</span>
+            <p className="text-xs text-ink-soft">
+              GCash number: <span className="font-medium">0917 000 0000</span>
             </p>
-            <p className='text-xs text-ink-soft'>
-              Account name:{' '}
-              <span className='font-medium'>
-                Makiling Hills - Woodlands HOA
-              </span>
+            <p className="text-xs text-ink-soft">
+              Account name: <span className="font-medium">Makiling Hills - Woodlands HOA</span>
             </p>
           </div>
         )}
       </div>
 
-      {/* Bank transfer option */}
-      <div className='border border-line rounded-2xl mb-5 overflow-hidden'>
+      <div className="mb-5 overflow-hidden rounded-2xl border border-line">
         <button
           onClick={() => setMethod('bank')}
-          className='w-full flex items-center gap-3 p-4 text-left'
+          className="flex w-full items-center gap-3 p-4 text-left"
         >
           <div
-            className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-              method === 'bank'
-                ? 'border-[5px] border-brand'
-                : 'border border-line'
-            }`}
+            className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${method === 'bank' ? 'border-[5px] border-brand' : 'border border-line'}`}
           />
-          <img src='/bdo-logo.png' alt='BDO' className='h-7 flex-shrink-0' />
-          <span className='text-sm font-medium flex-1'>
-            Pay via bank transfer
-          </span>
+          <img src="/bdo-logo.png" alt="BDO" className="h-5 flex-shrink-0" />
+          <span className="flex-1 text-sm font-medium">Pay via bank transfer</span>
         </button>
-
         {method === 'bank' && (
-          <div className='px-4 pb-4 animate-fadeInUp'>
-            <p className='text-xs text-ink-soft'>
-              Bank: <span className='font-medium'>BDO</span>
+          <div className="animate-fadeInUp px-4 pb-4">
+            <p className="text-xs text-ink-soft">
+              Bank: <span className="font-medium">BDO</span>
             </p>
-            <p className='text-xs text-ink-soft'>
-              Account name:{' '}
-              <span className='font-medium'>
-                Makiling Hills - Woodlands HOA
-              </span>
+            <p className="text-xs text-ink-soft">
+              Account name: <span className="font-medium">Makiling Hills - Woodlands HOA</span>
             </p>
-            <p className='text-xs text-ink-soft'>
-              Account number:{' '}
-              <span className='font-medium'>0000 0000 0000</span>
+            <p className="text-xs text-ink-soft">
+              Account number: <span className="font-medium">0000 0000 0000</span>
             </p>
           </div>
         )}
       </div>
 
-      {error && <p className='text-danger text-xs text-center mb-3'>{error}</p>}
+      {error && <p className="mb-3 text-center text-xs text-danger">{error}</p>}
 
-      <label className='block text-[11.5px] text-ink-soft mb-1.5'>
-        Reference or transaction number <span className='text-danger'>*</span>
+      <label className="mb-1.5 block text-[11.5px] text-ink-soft">
+        Amount you sent <span className="text-danger">*</span>
+      </label>
+      <input
+        type="number"
+        step="0.01"
+        value={amountPaid}
+        onChange={(e) => setAmountPaid(e.target.value)}
+        className="mb-1 w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm"
+      />
+      <p className="mb-4 text-[11px] text-ink-muted">
+        Sent a different amount than {`₱${remainingAmount.toFixed(2)}`}? Enter exactly what you sent
+        — we'll sort out the difference.
+      </p>
+
+      <label className="mb-1.5 block text-[11.5px] text-ink-soft">
+        Reference or transaction number <span className="text-danger">*</span>
       </label>
       <input
         value={referenceNumber}
         onChange={(e) => setReferenceNumber(e.target.value)}
-        placeholder='e.g. GCash reference number'
-        required
-        className='w-full border border-line rounded-xl px-3.5 py-2.5 text-sm mb-4 bg-surface'
+        placeholder="e.g. GCash reference number"
+        className="mb-4 w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm"
       />
 
       <button
         onClick={handleSubmit}
         disabled={pending}
-        className='w-full bg-brand disabled:opacity-60 text-on-brand rounded-xl py-3.5 text-sm font-medium'
+        className="w-full rounded-xl bg-brand py-3.5 text-sm font-medium text-on-brand disabled:opacity-60"
       >
         {pending ? 'Submitting…' : "I've sent my payment"}
       </button>

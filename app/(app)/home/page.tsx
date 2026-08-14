@@ -31,7 +31,6 @@ export default async function HomePage() {
     prisma.election.findFirst({ where: { closesAt: { gt: new Date() } } }),
     prisma.payment.findMany({
       where: { homeownerId, status: 'Confirmed' },
-      include: { duesCharge: true },
       orderBy: { submittedAt: 'desc' },
       take: 4,
     }),
@@ -63,7 +62,7 @@ export default async function HomePage() {
     ...payments.map((p) => ({
       id: `pay-${p.id}`,
       kind: 'pay' as const,
-      text: `You paid ₱${Number(p.amountPaid).toFixed(2)} for ${p.duesCharge.description}`,
+      text: `You paid ₱${Number(p.amountPaid).toFixed(2)}${p.allocationSummary ? ` — ${p.allocationSummary}` : ''}`,
       date: p.submittedAt,
     })),
     ...votes.map((v) => ({

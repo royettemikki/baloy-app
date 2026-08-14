@@ -41,13 +41,20 @@ body {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }
 
 button {
-  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease,
+    opacity 0.15s ease;
 }
 button:active:not(:disabled) {
   transform: scale(0.97);
@@ -59,4 +66,10 @@ button:active:not(:disabled) {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari, new Edge */
+}
+
+@media print {
+  body {
+    background: white;
+  }
 }

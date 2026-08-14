@@ -7,6 +7,15 @@ import { getAdminOrNull } from '@/lib/adminAuth';
 import { runDuesReminderCheck, buildReminderMessage } from '@/lib/duesReminders';
 import { getSmsProvider } from '@/lib/sms';
 import { formatPhilippineNumber } from '@/lib/sms/formatPhilippineNumber';
+import { runLateFeeCheck } from '@/lib/lateFees';
+
+export async function runLateFeeCheckNowAction() {
+  const admin = await requireDevAdmin();
+  if (!admin) return { error: 'This tool is only available in local development.' };
+
+  const { outcomes } = await runLateFeeCheck();
+  return { success: true, outcomes };
+}
 
 function isDevEnvironment() {
   return process.env.NODE_ENV !== 'production';

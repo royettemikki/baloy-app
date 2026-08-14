@@ -1,10 +1,9 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { IconCard, IconCheck, IconTrash } from '@/components/Icons';
 import PendingPaymentsQueue from '@/components/admin/payments/PendingPaymentsQueue';
 import PaymentHistoryRow from '@/components/admin/payments/PaymentHistoryRow';
 import AutoRefresh from '@/components/AutoRefresh';
-import { PaymentStatus } from '@prisma/client';
+import { IconCard, IconCheck, IconTrash } from '@/components/Icons';
 
 const PAGE_SIZE = 8;
 
@@ -21,7 +20,7 @@ export default async function AdminPaymentsPage({
   const to = searchParams.to ? new Date(searchParams.to + 'T23:59:59') : null;
 
   const historyWhere = {
-    status: { in: ['Confirmed', 'Rejected'] as PaymentStatus[] },
+    status: { in: ['Confirmed', 'Rejected'] as PaymentStatusArray },
     ...(from || to
       ? { submittedAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
       : {}),
@@ -31,7 +30,6 @@ export default async function AdminPaymentsPage({
             { homeowner: { fullName: { contains: q, mode: 'insensitive' as const } } },
             { homeowner: { email: { contains: q, mode: 'insensitive' as const } } },
             { homeowner: { unit: { contains: q, mode: 'insensitive' as const } } },
-            { duesCharge: { description: { contains: q, mode: 'insensitive' as const } } },
           ],
         }
       : {}),
@@ -41,7 +39,7 @@ export default async function AdminPaymentsPage({
     [
       prisma.payment.findMany({
         where: { status: 'Submitted' },
-        include: { homeowner: true, duesCharge: true },
+        include: { homeowner: true },
         orderBy: { submittedAt: 'asc' },
       }),
       prisma.payment.count({ where: { status: 'Confirmed', confirmedAt: { gte: startOfMonth } } }),
@@ -49,7 +47,7 @@ export default async function AdminPaymentsPage({
       prisma.payment.count({ where: historyWhere }),
       prisma.payment.findMany({
         where: historyWhere,
-        include: { homeowner: true, duesCharge: true },
+        include: { homeowner: true },
         orderBy: { submittedAt: 'desc' },
         skip: (page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
@@ -65,7 +63,6 @@ export default async function AdminPaymentsPage({
     referenceNumber: p.referenceNumber,
     submittedAt: p.submittedAt.toISOString(),
     homeowner: { fullName: p.homeowner.fullName, unit: p.homeowner.unit, email: p.homeowner.email },
-    duesCharge: { description: p.duesCharge.description },
   }));
 
   const serializedHistory = history.map((p) => ({
@@ -73,9 +70,9 @@ export default async function AdminPaymentsPage({
     amountPaid: Number(p.amountPaid),
     status: p.status as 'Confirmed' | 'Rejected',
     rejectionReason: p.rejectionReason,
+    allocationSummary: p.allocationSummary,
     submittedAt: p.submittedAt.toISOString(),
     homeowner: { fullName: p.homeowner.fullName, unit: p.homeowner.unit },
-    duesCharge: { description: p.duesCharge.description },
   }));
 
   function pageLink(targetPage: number) {
@@ -130,7 +127,7 @@ export default async function AdminPaymentsPage({
             <input
               name="q"
               defaultValue={q}
-              placeholder="Name, unit, or description…"
+              placeholder="Name, email, or unit…"
               className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm"
             />
           </div>
@@ -202,3 +199,5 @@ export default async function AdminPaymentsPage({
     </div>
   );
 }
+
+type PaymentStatusArray = ('Confirmed' | 'Rejected')[];

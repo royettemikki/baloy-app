@@ -16,6 +16,7 @@ model Homeowner {
   phoneNumber              String?
   emergencyContact         String?
   isAdmin                  Boolean   @default(false)
+  creditBalance            Decimal   @default(0) @db.Decimal(10, 2)
   notifyEmailAnnouncements Boolean   @default(true)
   notifyTextDuesReminders  Boolean   @default(true)
   notifyElectionAlerts     Boolean   @default(false)
@@ -43,31 +44,32 @@ enum PaymentStatus {
 }
 
 model DuesCharge {
-  id              Int          @id @default(autoincrement())
-  homeownerId     String
-  homeowner       Homeowner    @relation(fields: [homeownerId], references: [id])
-  description     String
-  amount          Decimal      @db.Decimal(10, 2)
-  dueDate         DateTime
-  status          ChargeStatus @default(Due)
-  reminderSentAt  DateTime?
-  payments        Payment[]
+  id               Int          @id @default(autoincrement())
+  homeownerId      String
+  homeowner        Homeowner    @relation(fields: [homeownerId], references: [id])
+  description      String
+  amount           Decimal      @db.Decimal(10, 2)
+  amountPaid       Decimal      @default(0) @db.Decimal(10, 2)
+  dueDate          DateTime
+  status           ChargeStatus @default(Due)
+  reminderSentAt   DateTime?
+  lateFeeAppliedAt DateTime?
 }
 
 model Payment {
-  id               Int           @id @default(autoincrement())
-  duesChargeId     Int
-  duesCharge       DuesCharge    @relation(fields: [duesChargeId], references: [id])
-  homeownerId      String
-  homeowner        Homeowner     @relation(fields: [homeownerId], references: [id])
-  amountPaid       Decimal       @db.Decimal(10, 2)
-  submittedAt      DateTime      @default(now())
-  confirmedAt      DateTime?
-  receiptReference String?
-  referenceNumber  String?
-  status           PaymentStatus @default(Submitted)
-  rejectionReason  String?
+  id                Int           @id @default(autoincrement())
+  homeownerId       String
+  homeowner         Homeowner     @relation(fields: [homeownerId], references: [id])
+  amountPaid        Decimal       @db.Decimal(10, 2)
+  submittedAt       DateTime      @default(now())
+  confirmedAt       DateTime?
+  receiptReference  String?
+  referenceNumber   String?
+  status            PaymentStatus @default(Submitted)
+  rejectionReason   String?
+  allocationSummary String?
 }
+
 enum AnnouncementTag {
   Maintenance
   Event

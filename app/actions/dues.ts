@@ -1,42 +1,21 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function claimPaymentAction(
-  duesChargeId: number,
-  referenceNumber: string,
-) {
+export async function claimPaymentAction(referenceNumber: string, amountPaid: number) {
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id;
   if (!homeownerId) return { error: 'You must be signed in.' };
-  if (!referenceNumber?.trim())
-    return { error: 'Reference or transaction number is required.' };
+  if (!referenceNumber?.trim()) return { error: 'Reference or transaction number is required.' };
+  if (!amountPaid || amountPaid <= 0) return { error: 'Enter the amount you actually sent.' };
 
-  const charge = await prisma.duesCharge.findFirst({
-    where: { id: duesChargeId, homeownerId },
+  await prisma.payment.create({
+    data: { homeownerId, amountPaid, referenceNumber, status: 'Submitted' },
   });
-  if (!charge) return { error: 'Charge not found.' };
-  if (charge.status !== 'Due' && charge.status !== 'Rejected') {
-    return { error: 'This charge is not awaiting payment.' };
-  }
 
-  await prisma.$transaction([
-    prisma.payment.create({
-      data: {
-        duesChargeId: charge.id,
-        homeownerId,
-        amountPaid: charge.amount,
-        referenceNumber,
-        status: 'Submitted',
-      },
-    }),
-    prisma.duesCharge.update({
-      where: { id: charge.id },
-      data: { status: 'Pending' },
-    }),
-  ]);
-
+  revalidatePath('/dues');
   return { success: true };
 }
