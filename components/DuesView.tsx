@@ -23,12 +23,16 @@ export default function DuesView({
   balance,
   creditBalance,
   receipts,
+  hasMoreHistory,
+  hasMoreReceipts,
   latestPayment,
 }: {
   charges: Charge[];
   balance: number;
   creditBalance: number;
   receipts: Receipt[];
+  hasMoreHistory: boolean;
+  hasMoreReceipts: boolean;
   latestPayment: LatestPayment;
 }) {
   const isPending = latestPayment?.status === 'Submitted';
@@ -77,7 +81,14 @@ export default function DuesView({
         </div>
       </div>
 
-      <p className="mb-2 text-sm font-medium text-ink-soft">History</p>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-medium text-ink-soft">History</p>
+        {hasMoreHistory && (
+          <Link href="/dues/history" className="text-xs font-medium text-brand">
+            View all →
+          </Link>
+        )}
+      </div>
 
       {charges.map((c) => {
         const remaining = c.amount - c.amountPaid;
@@ -115,7 +126,14 @@ export default function DuesView({
 
       {receipts.length > 0 && (
         <>
-          <p className="mb-2 mt-5 text-sm font-medium text-ink-soft">Receipts</p>
+          <div className="mb-2 mt-5 flex items-center justify-between">
+            <p className="text-sm font-medium text-ink-soft">Receipts</p>
+            {hasMoreReceipts && (
+              <Link href="/dues/receipts" className="text-xs font-medium text-brand">
+                View all →
+              </Link>
+            )}
+          </div>
           {receipts.map((r, i) => (
             <div
               key={r.id}

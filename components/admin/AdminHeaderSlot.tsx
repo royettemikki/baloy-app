@@ -8,6 +8,9 @@ const TITLES: Record<string, string> = {
   '/admin/announcements': 'Announcements',
   '/admin/elections': 'Elections',
   '/admin/payments': 'Payments',
+  '/admin/expenses': 'Expenses',
+  '/admin/reports/cash-flow': 'Reports',
+  '/admin/reports/compliance': 'Reports',
   '/admin/dev-tools': 'Dev Tools',
 };
 

@@ -145,3 +145,24 @@ model Vote {
 
   @@unique([positionId, homeownerId])
 }
+
+enum ExpenseCategory {
+  Maintenance
+  Utilities
+  Security
+  Landscaping
+  Administrative
+  SocialAndCultural
+  ReserveFund
+  Other
+}
+
+model Expense {
+  id          Int             @id @default(autoincrement())
+  category    ExpenseCategory
+  description String
+  amount      Decimal         @db.Decimal(10, 2)
+  paidTo      String
+  date        DateTime
+  createdAt   DateTime        @default(now())
+}

@@ -2,7 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { IconUser, IconMegaphone, IconBallot, IconCard, IconTrash } from '@/components/Icons';
+import {
+  IconUser,
+  IconMegaphone,
+  IconBallot,
+  IconCard,
+  IconFileText,
+  IconBarChart,
+  IconTrash,
+} from '@/components/Icons';
 
 function getLinks(isDev: boolean) {
   const base = [
@@ -10,6 +18,8 @@ function getLinks(isDev: boolean) {
     { href: '/admin/announcements', label: 'Announcements', Icon: IconMegaphone },
     { href: '/admin/elections', label: 'Elections', Icon: IconBallot },
     { href: '/admin/payments', label: 'Payments', Icon: IconCard },
+    { href: '/admin/expenses', label: 'Expenses', Icon: IconFileText },
+    { href: '/admin/reports', label: 'Reports', Icon: IconBarChart },
   ];
   return isDev
     ? [...base, { href: '/admin/dev-tools', label: 'Dev Tools', Icon: IconTrash }]
@@ -44,7 +54,7 @@ export default function AdminSidebar({
         <nav className="flex flex-col gap-0.5">
           <p className="mb-1.5 px-3 text-[10.5px] uppercase tracking-wide text-ink-muted">Manage</p>
           {getLinks(isDev).map(({ href, label, Icon }) => {
-            const active = pathname === href;
+            const active = pathname === href || pathname.startsWith(href + '/');
             return (
               <Link
                 key={href}
