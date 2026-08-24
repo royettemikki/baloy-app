@@ -6,6 +6,8 @@ import { IconBell, IconCard, IconBallot } from '@/components/Icons';
 import { organization } from '@/data/mock';
 import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
 import { formatShortDate, formatMonthName } from '@/lib/formatDate';
+import { getCommitteeMemberships } from '@/lib/electionWinners';
+import { hasApprovalAuthority } from '@/lib/electionWinners';
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
@@ -19,7 +21,16 @@ export default async function HomePage() {
     .toUpperCase();
   const homeownerId = (session?.user as any)?.id as string;
 
-  const [latest, totalNotices, openCharges, openElection, payments, votes] = await Promise.all([
+  const [
+    latest,
+    totalNotices,
+    openCharges,
+    openElection,
+    payments,
+    votes,
+    committeeMemberships,
+    canApprove,
+  ] = await Promise.all([
     prisma.announcement.findMany({
       orderBy: [{ pinned: 'desc' }, { postedAt: 'desc' }],
       take: 3,
@@ -28,7 +39,11 @@ export default async function HomePage() {
     prisma.duesCharge.findMany({
       where: { homeownerId, status: { not: 'Paid' } },
     }),
-    prisma.election.findFirst({ where: { closesAt: { gt: new Date() } } }),
+    prisma.election.findFirst({ where: { closesAt: { gt: new Date() } } }).then(async (e) => {
+      if (!e) return null;
+      const { isVotingOpen } = await import('@/lib/electionWindows');
+      return isVotingOpen(e) ? e : null;
+    }),
     prisma.payment.findMany({
       where: { homeownerId, status: 'Confirmed' },
       orderBy: { submittedAt: 'desc' },
@@ -40,6 +55,8 @@ export default async function HomePage() {
       orderBy: { castAt: 'desc' },
       take: 4,
     }),
+    getCommitteeMemberships(homeownerId),
+    hasApprovalAuthority(homeownerId),
   ]);
 
   const balance = openCharges.reduce((sum, c) => sum + Number(c.amount), 0);
@@ -130,7 +147,7 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {openElection && !alreadyVoted && (
+      {openElection && openElection.closesAt && !alreadyVoted && (
         <Link href="/vote">
           <div className="mb-3.5 flex items-center justify-between gap-2.5 rounded-2xl bg-surface-muted px-[18px] py-4">
             <div>
@@ -141,6 +158,34 @@ export default async function HomePage() {
             </div>
             <button className="flex-shrink-0 rounded-lg bg-brand px-3.5 py-2 text-xs text-on-brand">
               Vote
+            </button>
+          </div>
+        </Link>
+      )}
+
+      {committeeMemberships.length > 0 && (
+        <Link href="/expense-requests">
+          <div className="mb-3.5 flex items-center justify-between gap-2.5 rounded-2xl bg-surface-muted px-[18px] py-4">
+            <div>
+              <p className="mb-0.5 text-sm font-medium">Committee member</p>
+              <p className="text-xs text-ink-soft">You can request expenses for your committee</p>
+            </div>
+            <button className="flex-shrink-0 rounded-lg bg-brand px-3.5 py-2 text-xs text-on-brand">
+              Request
+            </button>
+          </div>
+        </Link>
+      )}
+
+      {canApprove && (
+        <Link href="/board-approvals">
+          <div className="mb-3.5 flex items-center justify-between gap-2.5 rounded-2xl bg-surface-muted px-[18px] py-4">
+            <div>
+              <p className="mb-0.5 text-sm font-medium">Expense approvals</p>
+              <p className="text-xs text-ink-soft">Review requests waiting on you</p>
+            </div>
+            <button className="flex-shrink-0 rounded-lg bg-brand px-3.5 py-2 text-xs text-on-brand">
+              Review
             </button>
           </div>
         </Link>

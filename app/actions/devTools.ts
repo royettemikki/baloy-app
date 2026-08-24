@@ -8,6 +8,7 @@ import { runDuesReminderCheck, buildReminderMessage } from '@/lib/duesReminders'
 import { getSmsProvider } from '@/lib/sms';
 import { formatPhilippineNumber } from '@/lib/sms/formatPhilippineNumber';
 import { runLateFeeCheck } from '@/lib/lateFees';
+import bcrypt from 'bcryptjs';
 
 export async function runLateFeeCheckNowAction() {
   const admin = await requireDevAdmin();
@@ -31,6 +32,8 @@ export async function resetElectionSeedAction() {
   if (!admin) return { error: 'This tool is only available in local development.' };
 
   await prisma.vote.deleteMany({});
+  await prisma.expenseRequest.deleteMany({});
+  await prisma.candidacyFiling.deleteMany({});
   await prisma.candidate.deleteMany({});
   await prisma.position.deleteMany({});
   await prisma.slate.deleteMany({});
@@ -39,7 +42,8 @@ export async function resetElectionSeedAction() {
   const election = await prisma.election.create({
     data: {
       title: '2026 Board Election',
-      closesAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      filingDurationHours: 168,
+      votingDurationHours: 120,
       slates: {
         create: [
           { name: 'Unity Team', color: '#0F6E56' },
@@ -49,9 +53,9 @@ export async function resetElectionSeedAction() {
     },
   });
 
-  const slates = await prisma.slate.findMany({ where: { electionId: election.id } });
-  const unity = slates.find((s) => s.name === 'Unity Team')!;
-  const kapitBisig = slates.find((s) => s.name === 'Kapit-Bisig Slate')!;
+  const slateRows = await prisma.slate.findMany({ where: { electionId: election.id } });
+  const unity = slateRows.find((s) => s.name === 'Unity Team')!;
+  const kapitBisig = slateRows.find((s) => s.name === 'Kapit-Bisig Slate')!;
 
   await prisma.position.create({
     data: {
@@ -307,4 +311,28 @@ export async function runReminderCheckNowAction() {
 
   const { outcomes } = await runDuesReminderCheck();
   return { success: true, outcomes };
+}
+
+export async function listAllResidentsAction() {
+  const admin = await requireDevAdmin();
+  if (!admin) return { error: 'This tool is only available in local development.' };
+
+  const homeowners = await prisma.homeowner.findMany({
+    select: { id: true, fullName: true, email: true },
+    orderBy: { fullName: 'asc' },
+  });
+
+  return { success: true, homeowners };
+}
+
+export async function setTestPasswordAction(homeownerId: string, newPassword: string) {
+  const admin = await requireDevAdmin();
+  if (!admin) return { error: 'This tool is only available in local development.' };
+  if (!newPassword || newPassword.length < 8)
+    return { error: 'Password must be at least 8 characters.' };
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.homeowner.update({ where: { id: homeownerId }, data: { passwordHash } });
+
+  return { success: true };
 }

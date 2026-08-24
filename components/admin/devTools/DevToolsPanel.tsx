@@ -10,6 +10,8 @@ import {
   listResidentsForSmsTestAction,
   sendTestReminderAction,
   runReminderCheckNowAction,
+  listAllResidentsAction,
+  setTestPasswordAction,
 } from '@/app/actions/devTools';
 import { ReminderOutcome } from '@/lib/duesReminders';
 import { runLateFeeCheckNowAction } from '@/app/actions/devTools';
@@ -21,8 +23,9 @@ const TOOLS: { key: ToolKey; title: string; description: string; danger: string 
     key: 'election',
     title: 'Reset election data',
     description:
-      'Wipes every election, position, candidate, slate, and vote, then creates one fresh 2-position election.',
-    danger: 'This permanently deletes all current election and voting data.',
+      'Wipes every election, position, candidate, slate, vote, candidacy filing, and expense request, then creates one fresh 2-position election.',
+    danger:
+      'This permanently deletes all current election, voting, filing, and expense-request history. Already-logged expenses are not affected.',
   },
   {
     key: 'announcements',
@@ -312,6 +315,79 @@ function LateFeeTestSection() {
   );
 }
 
+function SetPasswordSection() {
+  const [residents, setResidents] = useState<{ id: string; fullName: string; email: string }[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    listAllResidentsAction().then((result) => {
+      if ('success' in result && result.success) {
+        setResidents(result.homeowners ?? []);
+      }
+    });
+  }, []);
+
+  function handleSet() {
+    if (!selectedId || !password) return;
+    setError(null);
+    setMessage(null);
+    startTransition(async () => {
+      const result = await setTestPasswordAction(selectedId, password);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setMessage('Password updated.');
+      setPassword('');
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
+      <p className="mb-1 text-sm font-medium">Set a resident's password</p>
+      <p className="mb-3 text-xs text-ink-soft">
+        For logging into a test account when you don't know its password — this only works locally.
+      </p>
+
+      <div className="mb-2 flex flex-col gap-2 sm:flex-row">
+        <select
+          value={selectedId}
+          onChange={(e) => setSelectedId(e.target.value)}
+          className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm"
+        >
+          <option value="">Select a resident…</option>
+          {residents.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.fullName} ({r.email})
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="New password (min 8 characters)"
+          className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm"
+        />
+        <button
+          onClick={handleSet}
+          disabled={!selectedId || !password || pending}
+          className="rounded-lg bg-brand px-4 py-2 text-xs font-medium text-white disabled:opacity-60"
+        >
+          {pending ? 'Setting…' : 'Set password'}
+        </button>
+      </div>
+
+      {error && <p className="text-xs text-danger">{error}</p>}
+      {message && <p className="text-xs text-brand-strong">{message}</p>}
+    </div>
+  );
+}
+
 export default function DevToolsPanel() {
   return (
     <div className="flex flex-col gap-8">
@@ -326,6 +402,10 @@ export default function DevToolsPanel() {
       <div>
         <p className="mb-3 text-sm font-medium text-ink-soft">Late fees</p>
         <LateFeeTestSection />
+      </div>
+      <div>
+        <p className="mb-3 text-sm font-medium text-ink-soft">Accounts</p>
+        <SetPasswordSection />
       </div>
     </div>
   );

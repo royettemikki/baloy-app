@@ -27,6 +27,9 @@ model Homeowner {
   duesCharges              DuesCharge[]
   payments                 Payment[]
   votes                    Vote[]
+  candidateLinks           Candidate[]
+  expenseRequests          ExpenseRequest[]
+  candidacyFilings         CandidacyFiling[]
 }
 
 enum ChargeStatus {
@@ -100,12 +103,17 @@ model Slate {
 }
 
 model Election {
-  id        Int        @id @default(autoincrement())
-  title     String
-  opensAt   DateTime   @default(now())
-  closesAt  DateTime
-  positions Position[]
-  slates    Slate[]
+  id                  Int        @id @default(autoincrement())
+  title               String
+  opensAt             DateTime   @default(now())
+  filingDurationHours Float
+  votingDurationHours Float
+  filingOpensAt       DateTime?
+  filingClosesAt      DateTime?
+  votingOpensAt       DateTime?
+  closesAt            DateTime?
+  positions           Position[]
+  slates              Slate[]
 }
 
 model Position {
@@ -116,21 +124,26 @@ model Position {
   seats      Int         @default(1)
   candidates Candidate[]
   votes      Vote[]
+  expenseRequests ExpenseRequest[]
+  candidacyFilings CandidacyFiling[]
 }
 
 model Candidate {
-  id              Int      @id @default(autoincrement())
+  id              Int        @id @default(autoincrement())
   positionId      Int
-  position        Position @relation(fields: [positionId], references: [id])
+  position        Position   @relation(fields: [positionId], references: [id])
   name            String
   roleDescription String
   photoUrl        String?
   statement       String?
-  ballotNumber    Int      @default(1)
-  isIncumbent     Boolean  @default(false)
+  ballotNumber    Int        @default(1)
+  isIncumbent     Boolean    @default(false)
   slateId         Int?
-  slate           Slate?   @relation(fields: [slateId], references: [id])
+  slate           Slate?     @relation(fields: [slateId], references: [id])
+  homeownerId     String?
+  homeowner       Homeowner? @relation(fields: [homeownerId], references: [id])
   votes           Vote[]
+  candidacyFiling  CandidacyFiling?
 }
 
 model Vote {
@@ -165,4 +178,50 @@ model Expense {
   paidTo      String
   date        DateTime
   createdAt   DateTime        @default(now())
+  expenseRequest ExpenseRequest?
+}
+
+enum ExpenseRequestStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+model ExpenseRequest {
+  id                 Int                  @id @default(autoincrement())
+  homeownerId        String
+  homeowner          Homeowner            @relation(fields: [homeownerId], references: [id])
+  positionId         Int
+  position           Position             @relation(fields: [positionId], references: [id])
+  category           ExpenseCategory
+  description        String
+  amount             Decimal              @db.Decimal(10, 2)
+  justification      String
+  status             ExpenseRequestStatus @default(Pending)
+  rejectionReason    String?
+  resultingExpenseId Int?                 @unique
+  resultingExpense   Expense?             @relation(fields: [resultingExpenseId], references: [id])
+  createdAt          DateTime             @default(now())
+  reviewedAt         DateTime?
+}
+
+enum CandidacyFilingStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+model CandidacyFiling {
+  id                   Int                   @id @default(autoincrement())
+  homeownerId          String
+  homeowner            Homeowner             @relation(fields: [homeownerId], references: [id])
+  positionId           Int
+  position             Position              @relation(fields: [positionId], references: [id])
+  statement            String?
+  status               CandidacyFilingStatus @default(Pending)
+  rejectionReason      String?
+  resultingCandidateId Int?                  @unique
+  resultingCandidate   Candidate?            @relation(fields: [resultingCandidateId], references: [id])
+  createdAt            DateTime              @default(now())
+  reviewedAt           DateTime?
 }

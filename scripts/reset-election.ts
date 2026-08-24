@@ -109,8 +109,7 @@ const positions: PositionSeed[] = [
         name: 'Ramon Cruz',
         unit: '13D',
         slate: null,
-        statement:
-          'Independent oversight keeps elections honest. That is what I will provide.',
+        statement: 'Independent oversight keeps elections honest. That is what I will provide.',
       },
     ],
   },
@@ -172,15 +171,13 @@ const positions: PositionSeed[] = [
         name: 'Josefina Ramos',
         unit: '7F',
         slate: null,
-        statement:
-          'I have no personal stake in ongoing disputes and can mediate impartially.',
+        statement: 'I have no personal stake in ongoing disputes and can mediate impartially.',
       },
       {
         name: 'Ricardo Flores',
         unit: '20B',
         slate: 'Kapit-Bisig Slate',
-        statement:
-          'I want more mediation, less escalation straight to formal complaints.',
+        statement: 'I want more mediation, less escalation straight to formal complaints.',
       },
     ],
   },
@@ -228,15 +225,13 @@ const positions: PositionSeed[] = [
         unit: '6A',
         isIncumbent: true,
         slate: null,
-        statement:
-          'I started our composting pilot last year and want to expand it community-wide.',
+        statement: 'I started our composting pilot last year and want to expand it community-wide.',
       },
       {
         name: 'Rogelio Pascual',
         unit: '10E',
         slate: 'Unity Team',
-        statement:
-          'Better waste segregation and a real recycling schedule are overdue here.',
+        statement: 'Better waste segregation and a real recycling schedule are overdue here.',
       },
       {
         name: 'Ana Belmonte',
@@ -343,7 +338,8 @@ async function main() {
   const election = await prisma.election.create({
     data: {
       title: '2026 Board Election',
-      closesAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      filingDurationHours: 168,
+      votingDurationHours: 120,
       slates: {
         create: [
           { name: 'Unity Team', color: '#0F6E56' },
@@ -378,10 +374,7 @@ async function main() {
     });
   }
 
-  const totalCandidates = positions.reduce(
-    (sum, p) => sum + p.candidates.length,
-    0,
-  );
+  const totalCandidates = positions.reduce((sum, p) => sum + p.candidates.length, 0);
   console.log(
     `\nCreated fresh election #${election.id} with ${positions.length} positions and ${totalCandidates} candidates.`,
   );

@@ -209,3 +209,11 @@ export function IconBarChart(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}

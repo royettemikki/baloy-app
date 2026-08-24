@@ -17,9 +17,7 @@ export default function VoteWizard({
   election: Election;
   votedPositionIds: number[];
 }) {
-  const remaining = election.positions.filter(
-    (p) => !votedPositionIds.includes(p.id),
-  );
+  const remaining = election.positions.filter((p) => !votedPositionIds.includes(p.id));
 
   const [phase, setPhase] = useState<'voting' | 'review' | 'complete'>(
     remaining.length === 0 ? 'complete' : 'voting',
@@ -29,9 +27,7 @@ export default function VoteWizard({
   const [fromReview, setFromReview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [viewingCandidateId, setViewingCandidateId] = useState<number | null>(
-    null,
-  );
+  const [viewingCandidateId, setViewingCandidateId] = useState<number | null>(null);
   const [showSlatePicker, setShowSlatePicker] = useState(false);
   const router = useRouter();
 
@@ -54,9 +50,7 @@ export default function VoteWizard({
   function handleQuickVote(slateName: string) {
     const merged = { ...selections };
     remaining.forEach((position) => {
-      const match = position.candidates.find(
-        (c) => c.slate?.name === slateName,
-      );
+      const match = position.candidates.find((c) => c.slate?.name === slateName);
       if (match) merged[position.id] = match.id;
     });
     setSelections(merged);
@@ -88,13 +82,15 @@ export default function VoteWizard({
 
   function handleSubmitBallot() {
     setError(null);
-    const payload = remaining.map((p) => ({
-      positionId: p.id,
-      candidateId: selections[p.id],
-    }));
+    const payload = remaining.map((p) => ({ positionId: p.id, candidateId: selections[p.id] }));
     startTransition(async () => {
       const result = await castBallotAction(payload);
       if (result.error) {
+        if (result.error.includes('not currently open')) {
+          router.push('/vote');
+          router.refresh();
+          return;
+        }
         setError(result.error);
         return;
       }
@@ -104,8 +100,7 @@ export default function VoteWizard({
   }
 
   if (phase === 'complete') {
-    const alreadyDone =
-      remaining.length === 0 && Object.keys(selections).length === 0;
+    const alreadyDone = remaining.length === 0 && Object.keys(selections).length === 0;
     return <BallotComplete alreadyDone={alreadyDone} />;
   }
 

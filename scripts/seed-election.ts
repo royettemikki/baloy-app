@@ -6,7 +6,8 @@ async function main() {
   const election = await prisma.election.create({
     data: {
       title: '2026 Board Election',
-      closesAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      filingDurationHours: 168,
+      votingDurationHours: 120,
       positions: {
         create: [
           {
