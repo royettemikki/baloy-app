@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -9,7 +10,11 @@ import { isFilingOpen } from '@/lib/electionWindows';
 
 export default async function FileCandidacyPage() {
   const session = await getServerSession(authOptions);
-  const homeownerId = (session?.user as any)?.id as string;
+  const homeownerId = (session?.user as any)?.id as string | undefined;
+
+  if (!homeownerId) {
+    redirect('/login');
+  }
 
   const [candidatePositions, myFilings] = await Promise.all([
     prisma.position.findMany({

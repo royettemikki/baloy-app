@@ -1,11 +1,16 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export default async function DuesReceiptsPage() {
   const session = await getServerSession(authOptions);
-  const homeownerId = (session?.user as any)?.id as string;
+  const homeownerId = (session?.user as any)?.id as string | undefined;
+
+  if (!homeownerId) {
+    redirect('/login');
+  }
 
   const receipts = await prisma.payment.findMany({
     where: { homeownerId, status: 'Confirmed' },

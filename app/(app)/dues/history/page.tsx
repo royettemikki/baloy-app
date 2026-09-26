@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -6,7 +7,11 @@ import { formatFullDate } from '@/lib/formatDate';
 
 export default async function DuesHistoryPage() {
   const session = await getServerSession(authOptions);
-  const homeownerId = (session?.user as any)?.id as string;
+  const homeownerId = (session?.user as any)?.id as string | undefined;
+
+  if (!homeownerId) {
+    redirect('/login');
+  }
 
   const charges = await prisma.duesCharge.findMany({
     where: { homeownerId },
