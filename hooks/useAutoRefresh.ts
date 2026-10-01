@@ -1,0 +1,14 @@
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export function useAutoRefresh(intervalMs = 20000) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      router.refresh();
+    }, intervalMs);
+
+    return () => clearInterval(interval);
+  }, [router, intervalMs]);
+}

@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("BALOY_APP_DATABASE_DATABASE_URL")
+}
+
+model Homeowner {
+  id                       String    @id @default(cuid())
+  email                    String    @unique
+  passwordHash             String?
+  fullName                 String
+  unit                     String
+  phoneNumber              String?
+  emergencyContact         String?
+  isAdmin                  Boolean   @default(false)
+  creditBalance            Decimal   @default(0) @db.Decimal(10, 2)
+  notifyEmailAnnouncements Boolean   @default(true)
+  notifyTextDuesReminders  Boolean   @default(true)
+  notifyElectionAlerts     Boolean   @default(false)
+  inviteToken              String?   @unique
+  invitedAt                DateTime?
+  joinedAt                 DateTime?
+  createdAt                DateTime  @default(now())
+  duesCharges              DuesCharge[]
+  payments                 Payment[]
+  votes                    Vote[]
+  candidateLinks           Candidate[]
+  expenseRequests          ExpenseRequest[]
+  candidacyFilings         CandidacyFiling[]
+}
+
+enum ChargeStatus {
+  Due
+  Pending
+  Paid
+  Rejected
+  Overdue
+}
+
+enum PaymentStatus {
+  Submitted
+  Confirmed
+  Rejected
+}
+
+model DuesCharge {
+  id               Int          @id @default(autoincrement())
+  homeownerId      String
+  homeowner        Homeowner    @relation(fields: [homeownerId], references: [id])
+  description      String
+  amount           Decimal      @db.Decimal(10, 2)
+  amountPaid       Decimal      @default(0) @db.Decimal(10, 2)
+  dueDate          DateTime
+  status           ChargeStatus @default(Due)
+  reminderSentAt   DateTime?
+  lateFeeAppliedAt DateTime?
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  homeownerId       String
+  homeowner         Homeowner     @relation(fields: [homeownerId], references: [id])
+  amountPaid        Decimal       @db.Decimal(10, 2)
+  submittedAt       DateTime      @default(now())
+  confirmedAt       DateTime?
+  receiptReference  String?
+  referenceNumber   String?
+  status            PaymentStatus @default(Submitted)
+  rejectionReason   String?
+  allocationSummary String?
+}
+
+enum AnnouncementTag {
+  Maintenance
+  Event
+  Safety
+  Board
+}
+
+model Announcement {
+  id        Int              @id @default(autoincrement())
+  title     String
+  body      String
+  tag       AnnouncementTag
+  pinned    Boolean          @default(false)
+  postedBy  String
+  postedAt  DateTime         @default(now())
+  imageUrl  String?
+  startsAt  DateTime?
+  expiresAt DateTime?
+}
+
+model Slate {
+  id         Int         @id @default(autoincrement())
+  electionId Int
+  election   Election    @relation(fields: [electionId], references: [id])
+  name       String
+  color      String
+  candidates Candidate[]
+}
+
+model Election {
+  id                  Int        @id @default(autoincrement())
+  title               String
+  opensAt             DateTime   @default(now())
+  filingDurationHours Float
+  votingDurationHours Float
+  filingOpensAt       DateTime?
+  filingClosesAt      DateTime?
+  votingOpensAt       DateTime?
+  closesAt            DateTime?
+  positions           Position[]
+  slates              Slate[]
+}
+
+model Position {
+  id         Int         @id @default(autoincrement())
+  electionId Int
+  election   Election    @relation(fields: [electionId], references: [id])
+  title      String      // e.g. "President", "Treasurer"
+  seats      Int         @default(1)
+  candidates Candidate[]
+  votes      Vote[]
+  expenseRequests ExpenseRequest[]
+  candidacyFilings CandidacyFiling[]
+}
+
+model Candidate {
+  id              Int        @id @default(autoincrement())
+  positionId      Int
+  position        Position   @relation(fields: [positionId], references: [id])
+  name            String
+  roleDescription String
+  photoUrl        String?
+  statement       String?
+  ballotNumber    Int        @default(1)
+  isIncumbent     Boolean    @default(false)
+  slateId         Int?
+  slate           Slate?     @relation(fields: [slateId], references: [id])
+  homeownerId     String?
+  homeowner       Homeowner? @relation(fields: [homeownerId], references: [id])
+  votes           Vote[]
+  candidacyFiling  CandidacyFiling?
+}
+
+model Vote {
+  id          Int       @id @default(autoincrement())
+  positionId  Int
+  position    Position  @relation(fields: [positionId], references: [id])
+  candidateId Int
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  homeownerId String
+  homeowner   Homeowner @relation(fields: [homeownerId], references: [id])
+  castAt      DateTime  @default(now())
+
+  @@unique([positionId, homeownerId])
+}
+
+enum ExpenseCategory {
+  Maintenance
+  Utilities
+  Security
+  Landscaping
+  Administrative
+  SocialAndCultural
+  ReserveFund
+  Other
+}
+
+model Expense {
+  id          Int             @id @default(autoincrement())
+  category    ExpenseCategory
+  description String
+  amount      Decimal         @db.Decimal(10, 2)
+  paidTo      String
+  date        DateTime
+  createdAt   DateTime        @default(now())
+  expenseRequest ExpenseRequest?
+}
+
+enum ExpenseRequestStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+model ExpenseRequest {
+  id                 Int                  @id @default(autoincrement())
+  homeownerId        String
+  homeowner          Homeowner            @relation(fields: [homeownerId], references: [id])
+  positionId         Int
+  position           Position             @relation(fields: [positionId], references: [id])
+  category           ExpenseCategory
+  description        String
+  amount             Decimal              @db.Decimal(10, 2)
+  justification      String
+  status             ExpenseRequestStatus @default(Pending)
+  rejectionReason    String?
+  resultingExpenseId Int?                 @unique
+  resultingExpense   Expense?             @relation(fields: [resultingExpenseId], references: [id])
+  createdAt          DateTime             @default(now())
+  reviewedAt         DateTime?
+}
+
+enum CandidacyFilingStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+model CandidacyFiling {
+  id                   Int                   @id @default(autoincrement())
+  homeownerId          String
+  homeowner            Homeowner             @relation(fields: [homeownerId], references: [id])
+  positionId           Int
+  position             Position              @relation(fields: [positionId], references: [id])
+  statement            String?
+  status               CandidacyFilingStatus @default(Pending)
+  rejectionReason      String?
+  resultingCandidateId Int?                  @unique
+  resultingCandidate   Candidate?            @relation(fields: [resultingCandidateId], references: [id])
+  createdAt            DateTime              @default(now())
+  reviewedAt           DateTime?
+}

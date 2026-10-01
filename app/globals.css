@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  These variables are Millbrook Commons' theme (our one demo organization).
+  In the real product, these values come from the database per organization
+  and get rendered into a <style> tag based on the subdomain — see the
+  README for how that will plug in later.
+*/
+
+:root {
+  /* Brand */
+  --brand: #0f6e56;
+  --brand-soft: #e1f5ee;
+  --brand-strong: #085041;
+  --on-brand: #ffffff;
+
+  /* Semantic status colors */
+  --warning: #92610b;
+  --warning-soft: #fdf3e3;
+  --danger: #a32d2d;
+  --danger-soft: #fbeaea;
+  --purple: #3c3489;
+  --purple-soft: #eeedfe;
+  --coral: #712b13;
+  --coral-soft: #faece7;
+  --accent-warm: #7a4a0b;
+  --accent-warm-soft: #ffd9a0;
+
+  /* Theme surfaces and typography */
+  --ink: #14181f;
+  --ink-soft: #3b4a5a;
+  --ink-muted: #6b7280;
+  --surface: #ffffff;
+  --surface-muted: #f1f2f4;
+  --surface-hover: #e9ecef;
+  --line: #e4e6ea;
+
+  /* Overlay / inverse-on-brand helpers */
+  --on-brand-surface: #ffffff;
+  --on-brand-soft: rgba(255, 255, 255, 0.20);
+  --on-brand-subtle: rgba(255, 255, 255, 0.10);
+  --on-brand-muted: rgba(255, 255, 255, 0.70);
+  --overlay-subtle: rgba(0, 0, 0, 0.10);
+  --overlay: rgba(0, 0, 0, 0.40);
+  --overlay-medium: rgba(0, 0, 0, 0.50);
+  --overlay-strong: rgba(0, 0, 0, 0.60);
+
+  /* Dashboard background */
+  --dashboard-start: #d9f3e8;
+  --dashboard-mid: #f5f9f7;
+  --dashboard-end: #f1f2f4;
+}
+
+.theme-light {
+  color-scheme: light;
+}
+
+.theme-dark {
+  --ink: #f4f6f7;
+  --ink-soft: #aab1bc;
+  --ink-muted: #868f9b;
+  --surface: #14171c;
+  --surface-muted: #1c2027;
+  --surface-hover: #252b34;
+  --line: #252b33;
+
+  --brand-soft: rgba(11, 203, 149, 0.16);
+  --brand-strong: #0bcb95;
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --purple: #a78bfa;
+  --purple-soft: rgba(167, 139, 250, 0.14);
+  --coral: #fb923c;
+  --coral-soft: rgba(251, 146, 60, 0.14);
+  --accent-warm: #fbbf24;
+  --accent-warm-soft: rgba(251, 191, 36, 0.16);
+
+  --dashboard-start: #0f3028;
+  --dashboard-mid: #111a17;
+  --dashboard-end: #0b0e11;
+  color-scheme: dark;
+}
+
+/* If no preference has been selected yet, keep the app aligned with the OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.theme-light):not(.theme-dark) {
+    --ink: #f4f6f7;
+    --ink-soft: #aab1bc;
+    --ink-muted: #868f9b;
+    --surface: #14171c;
+    --surface-muted: #1c2027;
+    --surface-hover: #252b34;
+    --line: #252b33;
+    --brand-soft: rgba(11, 203, 149, 0.16);
+    --brand-strong: #0bcb95;
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.14);
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.14);
+    --purple: #a78bfa;
+    --purple-soft: rgba(167, 139, 250, 0.14);
+    --coral: #fb923c;
+    --coral-soft: rgba(251, 146, 60, 0.14);
+    --accent-warm: #fbbf24;
+    --accent-warm-soft: rgba(251, 191, 36, 0.16);
+    --dashboard-start: #0f3028;
+    --dashboard-mid: #111a17;
+    --dashboard-end: #0b0e11;
+    color-scheme: dark;
+  }
+}
+
+
+/* Product UI system: calm, spacious, and consistent across resident + admin views. */
+@layer components {
+  .ui-card {
+    @apply rounded-2xl border border-line bg-surface shadow-sm;
+  }
+
+  .ui-card-interactive {
+    @apply transition-all duration-150;
+  }
+
+  .ui-card-interactive:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--brand) 30%, transparent);
+    box-shadow: 0 10px 24px -14px var(--overlay-medium);
+  }
+
+  .ui-input {
+    @apply w-full rounded-xl border border-line bg-surface text-ink outline-none transition-all duration-150 placeholder:text-ink-muted;
+  }
+
+  .ui-input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent);
+  }
+
+  .theme-toggle {
+    @apply inline-flex items-center rounded-xl text-sm font-medium text-ink transition-colors;
+  }
+
+  .theme-toggle:hover {
+    background: var(--surface-hover);
+  }
+}
+
+::selection {
+  background: var(--brand-soft);
+  color: var(--ink);
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Dashboard keeps the same semantic theme tokens as the rest of the app. */
+.dashboard-bg {
+  background: linear-gradient(180deg, var(--dashboard-start) 0%, var(--dashboard-mid) 42%, var(--dashboard-end) 100%);
+  background-attachment: fixed;
+}
+
+
+html,
+body {
+  height: 100%;
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+
+body {
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+  line-height: 1.45;
+}
+
+button {
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, new Edge */
+}
+
+@media print {
+  body {
+    background: white;
+  }
+}
+
+.theme-dark body{background:var(--surface);color:var(--ink)}
+.theme-dark .bg-on-brand-surface{background-color:var(--surface)!important;}
+.theme-dark .text-on-brand{color:var(--ink)!important;}
+.theme-dark [class*=text-ink-soft-]{color:var(--ink-soft)!important;}
+.theme-dark [class*=bg-surface-muted-]{background-color:var(--surface-muted)!important;}
+.theme-dark [class*=border-line-]{border-color:var(--line)!important;}
