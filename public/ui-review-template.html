@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baloy HOA UI proposal</title>
+    <style>
+      :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17221e;background:#f4f7f5;font-synthesis:none;text-rendering:optimizeLegibility;--green:#176b52;--green-dark:#104c3c;--mint:#e5f3ed;--line:#e4eae6;--muted:#718078;--paper:#fff;--soft:#f7f9f8;--amber:#9a6311;--amber-bg:#fff4dc;--red:#a03b35;--red-bg:#fff0ee;--shadow:0 8px 30px rgba(25,60,45,.06)}
+      *{box-sizing:border-box}body{margin:0}.shell{min-height:100vh}.topbar{height:70px;background:var(--paper);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1280px)/2));position:sticky;top:0;z-index:5}.brand{display:flex;gap:11px;align-items:center;font-weight:750;letter-spacing:-.02em}.mark{width:36px;height:36px;border-radius:11px;background:var(--green);color:white;display:grid;place-items:center;font-size:13px}.brand small{display:block;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:2px}.top-actions{display:flex;align-items:center;gap:20px;color:#45564d;font-size:13px}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#f0d9b6;color:#67430c;font-size:12px;font-weight:700}.page{max-width:1280px;margin:auto;padding:34px 26px 64px}.switcher{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}.switcher-label{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:var(--muted);font-weight:700}.segmented{display:flex;gap:4px;background:#e9efeb;padding:4px;border-radius:12px}.segmented button{border:0;background:transparent;border-radius:9px;padding:9px 14px;color:#54645b;font-weight:650;cursor:pointer}.segmented button.active{background:white;color:var(--green-dark);box-shadow:0 1px 4px #152b1d18}.greeting{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px}.eyebrow{font-size:12px;color:var(--green);font-weight:700;letter-spacing:.04em}.greeting h1{font-size:30px;line-height:1.15;letter-spacing:-.04em;margin:7px 0 5px}.greeting p{color:var(--muted);font-size:14px;margin:0}.date{color:var(--muted);font-size:12px}.resident-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.85fr);gap:20px}.stack{display:grid;gap:18px;align-content:start}.balance-card{border-radius:20px;background:linear-gradient(130deg,#176b52,#104c3c);color:white;padding:23px 25px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:20px}.balance-card small{color:#c5e2d6;font-size:12px}.balance-card strong{display:block;font-size:32px;letter-spacing:-.04em;margin:7px 0}.balance-card p{margin:0;color:#d5e9e0;font-size:12px}.btn-primary,.btn-light{border:0;border-radius:10px;padding:11px 15px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}.btn-primary{background:var(--green);color:white}.balance-card .btn-light{background:white;color:var(--green-dark)}.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.quick a{background:white;border:1px solid var(--line);border-radius:15px;padding:16px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}.icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:var(--mint);color:var(--green);font-size:16px;margin-bottom:13px}.quick strong{display:block;font-size:13px}.quick small{font-size:11px;color:var(--muted);display:block;margin-top:4px}.card{background:var(--paper);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:var(--shadow)}.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.card h2{font-size:15px;margin:0;letter-spacing:-.02em}.text-link{color:var(--green);font-size:12px;text-decoration:none;font-weight:700}.notice{display:flex;gap:12px;padding:13px 0;border-top:1px solid var(--line)}.notice:first-of-type{border-top:0}.notice .icon{flex:0 0 34px;margin:0}.notice strong{font-size:13px;display:block}.notice p{font-size:12px;color:var(--muted);margin:4px 0;line-height:1.5}.notice time{font-size:10px;color:var(--muted)}.event{padding:13px 0;border-top:1px solid var(--line);display:flex;gap:12px}.event-date{width:44px;height:48px;flex:0 0 44px;border-radius:11px;background:var(--mint);color:var(--green);display:grid;place-content:center;text-align:center;font-weight:750;font-size:14px}.event-date small{font-size:9px;text-transform:uppercase}.event strong{font-size:12px}.event p{font-size:11px;color:var(--muted);margin:4px 0}.board-row{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:11px 0;font-size:12px}.board-row span:last-child{color:var(--muted)}
+      .admin-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px}.admin-head h1{font-size:28px;letter-spacing:-.04em;margin:6px 0}.admin-head p{color:var(--muted);margin:0;font-size:13px}.admin-layout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:22px}.side{background:white;border:1px solid var(--line);border-radius:16px;padding:13px;height:max-content;box-shadow:var(--shadow)}.side-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:750;padding:9px 10px}.side a{display:flex;justify-content:space-between;text-decoration:none;color:#506057;font-size:12px;padding:10px;border-radius:9px}.side a.selected{background:var(--green);color:white;font-weight:700}.badge{background:#fff4dc;color:var(--amber);border-radius:7px;padding:2px 7px;font-weight:700}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.stat{background:white;border:1px solid var(--line);border-radius:15px;padding:17px;box-shadow:var(--shadow)}.stat label{font-size:11px;color:var(--muted)}.stat strong{font-size:25px;display:block;margin:8px 0 3px;letter-spacing:-.04em}.stat small{font-size:10px;color:var(--muted)}.stat.attention strong{color:var(--amber)}.admin-content{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(270px,.8fr);gap:16px}.queue-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}.queue-row:first-of-type{border-top:0}.queue-row strong{font-size:12px}.queue-row p{font-size:11px;color:var(--muted);margin:4px 0 0}.money{font-weight:750;font-size:12px}.pill{font-size:10px;background:var(--amber-bg);color:var(--amber);padding:5px 8px;border-radius:20px;font-weight:700}.actions{display:flex;gap:7px}.actions button{border:1px solid var(--line);border-radius:8px;background:white;padding:7px 9px;font-size:10px;font-weight:700;color:#526158}.actions .approve{background:var(--green);border-color:var(--green);color:white}.bar-row{display:grid;grid-template-columns:75px 1fr 45px;gap:10px;align-items:center;font-size:11px;color:var(--muted);margin:14px 0}.bar{height:8px;background:#edf1ee;border-radius:10px;overflow:hidden}.bar i{height:100%;display:block;background:#65a68d;border-radius:10px}.helper{font-size:11px;color:var(--muted);line-height:1.55}.footer-note{margin-top:18px;color:var(--muted);font-size:10px;text-align:right}.hidden{display:none!important}
+      @media(max-width:850px){.page{padding:24px 18px 44px}.resident-grid{grid-template-columns:1fr}.admin-layout{grid-template-columns:1fr}.side{display:flex;gap:3px;overflow:auto}.side-label{display:none}.side a{white-space:nowrap}.admin-content{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.topbar{height:60px;padding:0 16px}.top-actions .top-link{display:none}.page{padding:20px 14px 34px}.switcher{align-items:flex-start;gap:10px;flex-direction:column;margin-bottom:22px}.greeting{align-items:flex-start}.greeting h1{font-size:25px}.date{display:none}.balance-card{align-items:flex-start;flex-direction:column;padding:20px}.balance-card strong{font-size:29px}.quick{grid-template-columns:1fr}.quick a{display:flex;align-items:center;gap:12px;padding:12px}.quick .icon{margin:0}.quick small{margin-top:3px}.quick .copy{flex:1}.stats{gap:8px}.stat{padding:13px}.stat strong{font-size:21px}.card{padding:16px}.queue-row{grid-template-columns:minmax(0,1fr) auto;gap:6px}.queue-row .actions{grid-column:1/-1}.queue-row .actions button{flex:1}.admin-head{align-items:flex-start}.admin-head .date{display:block}.side{margin-bottom:2px}.side a{font-size:11px;padding:8px}.footer-note{text-align:left}}
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand"><div class="mark">MH</div><div>Millbrook Commons<small>Homeowner association</small></div></div>
+        <div class="top-actions"><span class="top-link">Help &amp; contacts</span><span class="top-link">Notifications</span><div class="avatar">DW</div></div>
+      </header>
+      <main class="page">
+        <div class="switcher"><span class="switcher-label">UI proposal · preview the two main workspaces</span><div class="segmented"><button class="active" data-view="resident">Resident portal</button><button data-view="admin">Admin workspace</button></div></div>
+
+        <section id="resident-view">
+          <div class="greeting"><div><div class="eyebrow">HOMEOWNER PORTAL</div><h1>Good morning, Dana</h1><p>Here’s what’s happening in your community.</p></div><span class="date">Saturday, November 7</span></div>
+          <div class="resident-grid">
+            <div class="stack">
+              <section class="balance-card"><div><small>DUES ACCOUNT · UNIT 14B</small><strong>₱0.00</strong><p>All charges are paid. Your next assessment is due Dec 1.</p></div><button class="btn-light">View dues &amp; receipts</button></section>
+              <div class="quick">
+                <a href="#"><span class="icon">▤</span><span class="copy"><strong>Community notices</strong><small>3 recent updates</small></span>→</a>
+                <a href="#"><span class="icon">✓</span><span class="copy"><strong>Board election</strong><small>Voting closes Nov 14</small></span>→</a>
+                <a href="#"><span class="icon">♙</span><span class="copy"><strong>Your account</strong><small>Contact and preferences</small></span>→</a>
+              </div>
+              <section class="card"><div class="card-head"><h2>Community updates</h2><a class="text-link" href="#">All notices →</a></div>
+                <article class="notice"><span class="icon">⌂</span><div><strong>Water interruption · Building C</strong><p>Water service will be paused while the team completes a scheduled valve repair.</p><time>Facilities · Today</time></div></article>
+                <article class="notice"><span class="icon">✳</span><div><strong>Annual homeowners meeting</strong><p>Join the board on Saturday at the clubhouse. Submit questions in advance.</p><time>Board · Nov 5</time></div></article>
+                <article class="notice"><span class="icon">!</span><div><strong>Gate access reminder</strong><p>Please use your resident pass and report access issues to the guard desk.</p><time>Security · Nov 2</time></div></article>
+              </section>
+            </div>
+            <aside class="stack">
+              <section class="card"><div class="card-head"><h2>Upcoming</h2><a class="text-link" href="#">Calendar</a></div>
+                <div class="event"><div class="event-date">12<small>NOV</small></div><div><strong>Board meeting</strong><p>6:30 PM · Community hall</p></div></div>
+                <div class="event"><div class="event-date">14<small>NOV</small></div><div><strong>Election closes</strong><p>Cast your ballot by 8:00 PM</p></div></div>
+              </section>
+              <section class="card"><div class="card-head"><h2>Your board</h2><a class="text-link" href="#">View all</a></div>
+                <div class="board-row"><span>President</span><span>R. Osei</span></div><div class="board-row"><span>Treasurer</span><span>M. Ibarra</span></div><div class="board-row"><span>Secretary</span><span>P. Chandran</span></div>
+              </section>
+              <section class="card"><h2>Need help?</h2><p class="helper">Contact the property office about account access, dues questions, or common area concerns.</p><button class="btn-primary">Contact the office</button></section>
+            </aside>
+          </div>
+        </section>
+
+        <section id="admin-view" class="hidden">
+          <div class="admin-head"><div><div class="eyebrow">BOARD OPERATIONS</div><h1>Good morning, Dana</h1><p>Review the HOA’s finances and resident requests.</p></div><span class="date">Saturday, November 7</span></div>
+          <div class="admin-layout">
+            <nav class="side"><div class="side-label">Workspace</div><a class="selected" href="#">Overview</a><a href="#">Residents <span class="badge">4</span></a><a href="#">Payments <span class="badge">3</span></a><a href="#">Expenses <span class="badge">2</span></a><a href="#">Elections</a><a href="#">Announcements</a><a href="#">Reports</a></nav>
+            <div>
+              <div class="stats"><div class="stat"><label>Collected this month</label><strong>₱84,250</strong><small>Across 47 confirmed payments</small></div><div class="stat"><label>Outstanding dues</label><strong>₱12,400</strong><small>8 homeowner accounts</small></div><div class="stat attention"><label>Needs review</label><strong>5 items</strong><small>3 payments · 2 expenses</small></div><div class="stat"><label>Active residents</label><strong>126</strong><small>4 invites not yet claimed</small></div></div>
+              <div class="admin-content">
+                <section class="card"><div class="card-head"><h2>Items needing review</h2><a class="text-link" href="#">Open payments →</a></div>
+                  <div class="queue-row"><div><strong>Alex Santos · Unit 08A</strong><p>GCash · Ref 8293 1042 · submitted 2 hours ago</p></div><span class="money">₱2,450</span><span class="pill">Payment</span><div class="actions"><button>Review details</button><button class="approve">Confirm</button></div></div>
+                  <div class="queue-row"><div><strong>Pool gate lock replacement</strong><p>Maintenance committee · submitted yesterday</p></div><span class="money">₱3,200</span><span class="pill">Expense</span><div class="actions"><button>View request</button><button class="approve">Review</button></div></div>
+                  <div class="queue-row"><div><strong>Jamie Reyes · Unit 12C</strong><p>Bank transfer · Ref 4401 6329 · submitted 2 days ago</p></div><span class="money">₱1,800</span><span class="pill">Payment</span><div class="actions"><button>Review details</button><button class="approve">Confirm</button></div></div>
+                </section>
+                <div class="stack">
+                  <section class="card"><div class="card-head"><h2>Monthly collections</h2><a class="text-link" href="#">Report →</a></div><p class="helper">Confirmed payments by month</p><div class="bar-row"><span>Aug</span><div class="bar"><i style="width:63%"></i></div><b>₱61k</b></div><div class="bar-row"><span>Sep</span><div class="bar"><i style="width:80%"></i></div><b>₱78k</b></div><div class="bar-row"><span>Oct</span><div class="bar"><i style="width:72%"></i></div><b>₱70k</b></div><div class="bar-row"><span>Nov</span><div class="bar"><i style="width:87%"></i></div><b>₱84k</b></div></section>
+                  <section class="card"><div class="card-head"><h2>Quick actions</h2></div><p class="helper">Create a resident invite, publish a notice, or set up the next election.</p><div class="actions"><button>Invite resident</button><button>Post notice</button></div></section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <p class="footer-note">Static concept only · controls are illustrative</p>
+      </main>
+    </div>
+    <script>
+      document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => {
+        const admin = button.dataset.view === 'admin';
+        document.querySelector('#resident-view').classList.toggle('hidden', admin);
+        document.querySelector('#admin-view').classList.toggle('hidden', !admin);
+        document.querySelectorAll('[data-view]').forEach((tab) => tab.classList.toggle('active', tab === button));
+      }));
+    </script>
+  </body>
+</html>
