@@ -5,15 +5,18 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatFullDate } from '@/lib/formatDate';
 import { IconCheck, IconChevronDown, IconFileText } from '@/components/Icons';
+import { getPropertyResidentIds } from '@/lib/propertyAccess';
 
 export default async function DuesReceiptsPage() {
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id as string | undefined;
 
   if (!homeownerId) redirect('/login');
+  const residentIds = await getPropertyResidentIds(homeownerId);
+  if (!residentIds) redirect('/login');
 
   const receipts = await prisma.payment.findMany({
-    where: { homeownerId, status: 'Confirmed' },
+    where: { homeownerId: { in: residentIds }, status: 'Confirmed' },
     orderBy: { confirmedAt: 'desc' },
   });
 

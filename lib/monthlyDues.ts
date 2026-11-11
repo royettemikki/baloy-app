@@ -6,26 +6,40 @@ function startOfCurrentMonth(date = new Date()) {
 
 export async function generateMonthlyDues(period = startOfCurrentMonth()) {
   const billingPeriod = startOfCurrentMonth(period);
-  const [settings, homeowners] = await Promise.all([
+  const [settings, properties] = await Promise.all([
     prisma.duesSettings.findUnique({ where: { id: 1 } }),
-    prisma.homeowner.findMany({
-      where: { passwordHash: { not: null } },
-      select: {
-        id: true,
-        lotAreaSqm: true,
-        monthlyDuesMode: true,
-        monthlyDuesRate: true,
-        duesRateOverride: true,
+    prisma.property.findMany({
+      where: { homeowners: { some: { passwordHash: { not: null } } } },
+      include: {
+        homeowners: {
+          where: { passwordHash: { not: null } },
+          select: { id: true },
+        },
       },
     }),
   ]);
 
+  const allResidentIds = properties.flatMap((property) =>
+    property.homeowners.map((homeowner) => homeowner.id),
+  );
+  const existingCharges = await prisma.duesCharge.findMany({
+    where: { homeownerId: { in: allResidentIds }, billingPeriod },
+    select: { homeownerId: true },
+  });
+  const billedResidentIds = new Set(existingCharges.map((charge) => charge.homeownerId));
+
   const monthName = new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     .format(billingPeriod);
-  const charges = homeowners.flatMap((homeowner) => {
-    const mode = homeowner.duesRateOverride ? homeowner.monthlyDuesMode : settings?.monthlyDuesMode ?? 'Fixed';
-    const rate = Number(homeowner.duesRateOverride ? homeowner.monthlyDuesRate : settings?.monthlyDuesRate ?? 0);
-    const area = Number(homeowner.lotAreaSqm ?? 0);
+  const charges = properties.flatMap((property) => {
+    const homeowner = property.homeowners.find((resident) => resident.id === property.primaryVoterId)
+      ?? property.homeowners[0];
+    if (!homeowner || property.homeowners.some((resident) => billedResidentIds.has(resident.id))) {
+      return [];
+    }
+
+    const mode = property.duesRateOverride ? property.monthlyDuesMode : settings?.monthlyDuesMode ?? 'Fixed';
+    const rate = Number(property.duesRateOverride ? property.monthlyDuesRate : settings?.monthlyDuesRate ?? 0);
+    const area = Number(property.lotAreaSqm ?? 0);
     const amount = Math.round((mode === 'PerArea' ? rate * area : rate) * 100) / 100;
     if (!Number.isFinite(amount) || amount <= 0) return [];
 
@@ -39,10 +53,10 @@ export async function generateMonthlyDues(period = startOfCurrentMonth()) {
     }];
   });
 
-  if (charges.length === 0) return { created: 0, eligibleResidents: 0 };
+  if (charges.length === 0) return { created: 0, eligibleResidents: properties.length };
 
   const result = await prisma.duesCharge.createMany({ data: charges, skipDuplicates: true });
-  return { created: result.count, eligibleResidents: homeowners.length };
+  return { created: result.count, eligibleResidents: properties.length };
 }
 
 export async function ensureCurrentMonthDues() {

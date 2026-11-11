@@ -8,32 +8,52 @@ datasource db {
 }
 
 model Homeowner {
-  id                       String    @id @default(cuid())
-  email                    String    @unique
+  id                       String            @id @default(cuid())
+  email                    String            @unique
   passwordHash             String?
   fullName                 String
   unit                     String
-  lotAreaSqm               Decimal?     @db.Decimal(10, 2)
-  monthlyDuesMode          DuesRateMode @default(Fixed)
-  monthlyDuesRate          Decimal      @default(0) @db.Decimal(10, 2)
-  duesRateOverride         Boolean      @default(false)
+  lotAreaSqm               Decimal?          @db.Decimal(10, 2)
+  monthlyDuesMode          DuesRateMode      @default(Fixed)
+  monthlyDuesRate          Decimal           @default(0) @db.Decimal(10, 2)
+  duesRateOverride         Boolean           @default(false)
   phoneNumber              String?
   emergencyContact         String?
-  isAdmin                  Boolean   @default(false)
-  creditBalance            Decimal   @default(0) @db.Decimal(10, 2)
-  notifyEmailAnnouncements Boolean   @default(true)
-  notifyTextDuesReminders  Boolean   @default(true)
-  notifyElectionAlerts     Boolean   @default(false)
-  inviteToken              String?   @unique
+  isAdmin                  Boolean           @default(false)
+  creditBalance            Decimal           @default(0) @db.Decimal(10, 2)
+  notifyEmailAnnouncements Boolean           @default(true)
+  notifyTextDuesReminders  Boolean           @default(true)
+  notifyElectionAlerts     Boolean           @default(false)
+  inviteToken              String?           @unique
   invitedAt                DateTime?
   joinedAt                 DateTime?
-  createdAt                DateTime  @default(now())
+  createdAt                DateTime          @default(now())
+  propertyId               String
+  property                 Property          @relation("PropertyResidents", fields: [propertyId], references: [id])
+  primaryForProperty       Property?         @relation("PrimaryPropertyVoter")
   duesCharges              DuesCharge[]
   payments                 Payment[]
   votes                    Vote[]
   candidateLinks           Candidate[]
   expenseRequests          ExpenseRequest[]
   candidacyFilings         CandidacyFiling[]
+}
+
+model Property {
+  id               String           @id @default(cuid())
+  unit             String
+  normalizedUnit   String           @unique
+  lotAreaSqm       Decimal?         @db.Decimal(10, 2)
+  monthlyDuesMode  DuesRateMode     @default(Fixed)
+  monthlyDuesRate  Decimal          @default(0) @db.Decimal(10, 2)
+  duesRateOverride Boolean          @default(false)
+  creditBalance    Decimal          @default(0) @db.Decimal(10, 2)
+  needsReview      Boolean          @default(false)
+  primaryVoterId   String?          @unique
+  primaryVoter     Homeowner?       @relation("PrimaryPropertyVoter", fields: [primaryVoterId], references: [id], onDelete: SetNull)
+  homeowners       Homeowner[]      @relation("PropertyResidents")
+  votes            Vote[]
+  ballots          PropertyBallot[]
 }
 
 enum ChargeStatus {
@@ -56,10 +76,10 @@ enum DuesRateMode {
 }
 
 model DuesSettings {
-  id               Int          @id @default(1)
-  monthlyDuesMode  DuesRateMode  @default(Fixed)
-  monthlyDuesRate  Decimal      @default(0) @db.Decimal(10, 2)
-  updatedAt        DateTime     @updatedAt
+  id              Int          @id @default(1)
+  monthlyDuesMode DuesRateMode @default(Fixed)
+  monthlyDuesRate Decimal      @default(0) @db.Decimal(10, 2)
+  updatedAt       DateTime     @updatedAt
 }
 
 model DuesCharge {
@@ -100,13 +120,13 @@ enum AnnouncementTag {
 }
 
 model Announcement {
-  id        Int              @id @default(autoincrement())
+  id        Int             @id @default(autoincrement())
   title     String
   body      String
   tag       AnnouncementTag
-  pinned    Boolean          @default(false)
+  pinned    Boolean         @default(false)
   postedBy  String
-  postedAt  DateTime         @default(now())
+  postedAt  DateTime        @default(now())
   imageUrl  String?
   startsAt  DateTime?
   expiresAt DateTime?
@@ -136,46 +156,62 @@ model Election {
 }
 
 model Position {
-  id         Int         @id @default(autoincrement())
-  electionId Int
-  election   Election    @relation(fields: [electionId], references: [id])
-  title      String      // e.g. "President", "Treasurer"
-  seats      Int         @default(1)
-  candidates Candidate[]
-  votes      Vote[]
-  expenseRequests ExpenseRequest[]
+  id               Int               @id @default(autoincrement())
+  electionId       Int
+  election         Election          @relation(fields: [electionId], references: [id])
+  title            String // e.g. "President", "Treasurer"
+  seats            Int               @default(1)
+  candidates       Candidate[]
+  votes            Vote[]
+  propertyBallots  PropertyBallot[]
+  expenseRequests  ExpenseRequest[]
   candidacyFilings CandidacyFiling[]
 }
 
 model Candidate {
-  id              Int        @id @default(autoincrement())
+  id              Int              @id @default(autoincrement())
   positionId      Int
-  position        Position   @relation(fields: [positionId], references: [id])
+  position        Position         @relation(fields: [positionId], references: [id])
   name            String
   roleDescription String
   photoUrl        String?
   statement       String?
-  ballotNumber    Int        @default(1)
-  isIncumbent     Boolean    @default(false)
+  ballotNumber    Int              @default(1)
+  isIncumbent     Boolean          @default(false)
   slateId         Int?
-  slate           Slate?     @relation(fields: [slateId], references: [id])
+  slate           Slate?           @relation(fields: [slateId], references: [id])
   homeownerId     String?
-  homeowner       Homeowner? @relation(fields: [homeownerId], references: [id])
+  homeowner       Homeowner?       @relation(fields: [homeownerId], references: [id])
   votes           Vote[]
-  candidacyFiling  CandidacyFiling?
+  candidacyFiling CandidacyFiling?
 }
 
 model Vote {
-  id          Int       @id @default(autoincrement())
-  positionId  Int
-  position    Position  @relation(fields: [positionId], references: [id])
-  candidateId Int
-  candidate   Candidate @relation(fields: [candidateId], references: [id])
-  homeownerId String
-  homeowner   Homeowner @relation(fields: [homeownerId], references: [id])
-  castAt      DateTime  @default(now())
+  id               Int             @id @default(autoincrement())
+  positionId       Int
+  position         Position        @relation(fields: [positionId], references: [id])
+  propertyId       String
+  property         Property        @relation(fields: [propertyId], references: [id])
+  propertyBallotId Int?            @unique
+  propertyBallot   PropertyBallot? @relation(fields: [propertyBallotId], references: [id])
+  candidateId      Int
+  candidate        Candidate       @relation(fields: [candidateId], references: [id])
+  homeownerId      String
+  homeowner        Homeowner       @relation(fields: [homeownerId], references: [id])
+  castAt           DateTime        @default(now())
 
   @@unique([positionId, homeownerId])
+}
+
+model PropertyBallot {
+  id         Int      @id @default(autoincrement())
+  positionId Int
+  position   Position @relation(fields: [positionId], references: [id])
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  vote       Vote?
+
+  @@unique([positionId, propertyId])
 }
 
 enum ExpenseCategory {
@@ -190,13 +226,13 @@ enum ExpenseCategory {
 }
 
 model Expense {
-  id          Int             @id @default(autoincrement())
-  category    ExpenseCategory
-  description String
-  amount      Decimal         @db.Decimal(10, 2)
-  paidTo      String
-  date        DateTime
-  createdAt   DateTime        @default(now())
+  id             Int             @id @default(autoincrement())
+  category       ExpenseCategory
+  description    String
+  amount         Decimal         @db.Decimal(10, 2)
+  paidTo         String
+  date           DateTime
+  createdAt      DateTime        @default(now())
   expenseRequest ExpenseRequest?
 }
 

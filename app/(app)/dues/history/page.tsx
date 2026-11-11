@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatFullDate } from '@/lib/formatDate';
 import { IconChevronDown } from '@/components/Icons';
+import { getPropertyResidentIds } from '@/lib/propertyAccess';
 
 const currency = (amount: number) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -14,9 +15,11 @@ export default async function DuesHistoryPage() {
   const homeownerId = (session?.user as any)?.id as string | undefined;
 
   if (!homeownerId) redirect('/login');
+  const residentIds = await getPropertyResidentIds(homeownerId);
+  if (!residentIds) redirect('/login');
 
   const charges = await prisma.duesCharge.findMany({
-    where: { homeownerId },
+    where: { homeownerId: { in: residentIds } },
     orderBy: { dueDate: 'desc' },
   });
 
@@ -28,7 +31,7 @@ export default async function DuesHistoryPage() {
       <header className="mb-5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Dues &amp; payments</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">Charge history</h1>
-        <p className="mt-1 text-sm text-ink-soft">Your assessments and payment status.</p>
+        <p className="mt-1 text-sm text-ink-soft">Assessments and payment status for your property.</p>
       </header>
 
       {charges.length > 0 ? (

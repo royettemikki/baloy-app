@@ -4,7 +4,12 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import CopyInviteLink from './CopyInviteLink';
 import EditResidentPanel from './EditResidentPanel';
-import { toggleAdminAction, resendInviteAction, revokeInviteAction } from '@/app/actions/admin';
+import {
+  toggleAdminAction,
+  resendInviteAction,
+  revokeInviteAction,
+  setPrimaryVoterAction,
+} from '@/app/actions/admin';
 import { useFlipMenu } from '@/hooks/useFlipMenu';
 import { IconDots, IconEdit, IconUser, IconRefresh, IconTrash } from '@/components/Icons';
 import { Resident } from '@/types/resident';
@@ -38,6 +43,19 @@ export default function ResidentActionsMenu({
     setError(null);
     startTransition(async () => {
       const result = await toggleAdminAction(homeowner.id);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function handleSetPrimaryVoter() {
+    closeMenu();
+    setError(null);
+    startTransition(async () => {
+      const result = await setPrimaryVoterAction(homeowner.propertyId, homeowner.id);
       if (result.error) {
         setError(result.error);
         return;
@@ -128,6 +146,16 @@ export default function ResidentActionsMenu({
                   >
                     <IconEdit width={14} height={14} className="text-ink-soft" /> Edit details
                   </button>
+
+                  {!isPending && !homeowner.isPrimaryVoter && (
+                    <button
+                      onClick={handleSetPrimaryVoter}
+                      disabled={pending}
+                      className="flex w-full items-center gap-2 px-3.5 py-2 text-sm hover:bg-surface-muted disabled:opacity-60"
+                    >
+                      Set as primary voter
+                    </button>
+                  )}
 
                   {!isSelf && (
                     <button

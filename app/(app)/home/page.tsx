@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { IconBell, IconCard, IconBallot } from '@/components/Icons';
@@ -7,6 +8,7 @@ import { organization } from '@/data/mock';
 import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
 import { formatShortDate, formatMonthName } from '@/lib/formatDate';
 import { getCommitteeMemberships, hasApprovalAuthority } from '@/lib/electionWinners';
+import { ensureCurrentMonthDues } from '@/lib/monthlyDues';
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
@@ -19,7 +21,23 @@ export default async function HomePage() {
     .join('')
     .toUpperCase();
   const homeownerId = (session?.user as any)?.id as string;
-  const unit = (session?.user as any)?.unit;
+  const account = await prisma.homeowner.findUnique({
+    where: { id: homeownerId },
+    select: {
+      propertyId: true,
+      property: {
+        select: {
+          unit: true,
+          primaryVoterId: true,
+          homeowners: { select: { id: true } },
+        },
+      },
+    },
+  });
+  if (!account) redirect('/login');
+  await ensureCurrentMonthDues();
+  const residentIds = account.property.homeowners.map((resident) => resident.id);
+  const unit = account.property.unit;
   const now = new Date();
   const visibleAnnouncementWhere = {
     AND: [
@@ -36,19 +54,21 @@ export default async function HomePage() {
         take: 3,
       }),
       prisma.announcement.count({ where: visibleAnnouncementWhere }),
-      prisma.duesCharge.findMany({ where: { homeownerId, status: { not: 'Paid' } } }),
+      prisma.duesCharge.findMany({
+        where: { homeownerId: { in: residentIds }, status: { not: 'Paid' } },
+      }),
       prisma.election.findFirst({ where: { closesAt: { gt: now } } }).then(async (election) => {
         if (!election) return null;
         const { isVotingOpen } = await import('@/lib/electionWindows');
         return isVotingOpen(election) ? election : null;
       }),
       prisma.payment.findMany({
-        where: { homeownerId, status: 'Confirmed' },
+        where: { homeownerId: { in: residentIds }, status: 'Confirmed' },
         orderBy: { submittedAt: 'desc' },
         take: 4,
       }),
       prisma.vote.findMany({
-        where: { homeownerId },
+        where: { propertyId: account.propertyId },
         include: { position: true, candidate: true },
         orderBy: { castAt: 'desc' },
         take: 4,
@@ -69,11 +89,14 @@ export default async function HomePage() {
 
   let alreadyVoted = true;
   if (openElection) {
-    const [positionCount, myVoteCount] = await Promise.all([
+    const [positionCount, propertyVotes] = await Promise.all([
       prisma.position.count({ where: { electionId: openElection.id } }),
-      prisma.vote.count({ where: { homeownerId, position: { electionId: openElection.id } } }),
+      prisma.vote.findMany({
+        where: { propertyId: account.propertyId, position: { electionId: openElection.id } },
+        select: { positionId: true },
+      }),
     ]);
-    alreadyVoted = myVoteCount >= positionCount;
+    alreadyVoted = new Set(propertyVotes.map((vote) => vote.positionId)).size >= positionCount;
   }
 
   const activity = [
@@ -93,7 +116,8 @@ export default async function HomePage() {
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, 4);
 
-  const needsAction = balance > 0 || (!!openElection && !alreadyVoted);
+  const isPrimaryVoter = account.property.primaryVoterId === homeownerId;
+  const needsAction = balance > 0 || (!!openElection && isPrimaryVoter && !alreadyVoted);
 
   return (
     <div className="space-y-2 pb-4">
@@ -175,24 +199,34 @@ export default async function HomePage() {
           <h2 id="actions-heading" className="mb-3 text-base font-semibold">
             Your next step
           </h2>
-          <Link
-            href="/vote"
-            className="ui-card-interactive flex items-center justify-between gap-4 rounded-2xl bg-brand p-4 text-on-brand shadow-sm"
-          >
-            <div className="min-w-0">
-              <span className="mb-2 inline-flex rounded-full bg-brand px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-brand">
-                Voting is open
+          {isPrimaryVoter ? (
+            <Link
+              href="/vote"
+              className="ui-card-interactive flex items-center justify-between gap-4 rounded-2xl bg-brand p-4 text-on-brand shadow-sm"
+            >
+              <div className="min-w-0">
+                <span className="mb-2 inline-flex rounded-full bg-brand px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-brand">
+                  Voting is open
+                </span>
+                <p className="text-sm font-semibold">{openElection.title}</p>
+                <p className="mt-1 text-xs text-on-brand-muted">
+                  Cast your vote
+                  {openElection.closesAt ? ` by ${formatShortDate(openElection.closesAt)}` : ''}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-on-brand-surface px-4 py-2 text-xs font-semibold text-brand">
+                Vote
               </span>
-              <p className="text-sm font-semibold">{openElection.title}</p>
-              <p className="mt-1 text-xs text-on-brand-muted">
-                Cast your vote
-                {openElection.closesAt ? ` by ${formatShortDate(openElection.closesAt)}` : ''}
+            </Link>
+          ) : (
+            <div className="rounded-2xl border border-line bg-surface p-4">
+              <p className="text-sm font-semibold text-ink">{openElection.title}</p>
+              <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                Only your property&apos;s administrator-designated primary voter can cast its ballot.
+                Contact your administrator if you believe you should be designated.
               </p>
             </div>
-            <span className="shrink-0 rounded-full bg-on-brand-surface px-4 py-2 text-xs font-semibold text-brand">
-              Vote
-            </span>
-          </Link>
+          )}
         </section>
       )}
 

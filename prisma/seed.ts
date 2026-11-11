@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { normalizePropertyUnit } from '../lib/propertyUnit';
 
 const prisma = new PrismaClient();
 
@@ -15,15 +16,27 @@ async function main() {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  await prisma.homeowner.upsert({
-    where: { email },
-    update: {},
-    create: {
-      email,
-      passwordHash,
-      fullName,
-      unit,
-    },
+  await prisma.$transaction(async (tx) => {
+    const trimmedUnit = unit.trim();
+    const property = await tx.property.upsert({
+      where: { normalizedUnit: normalizePropertyUnit(trimmedUnit) },
+      update: {},
+      create: {
+        unit: trimmedUnit,
+        normalizedUnit: normalizePropertyUnit(trimmedUnit),
+      },
+    });
+    await tx.homeowner.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        passwordHash,
+        fullName,
+        unit: property.unit,
+        propertyId: property.id,
+      },
+    });
   });
   console.log(`Seeded resident ${email}.`);
 }

@@ -44,12 +44,12 @@ export default function CommunityDuesSettings({
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Community-wide billing</p>
           <h2 className="mt-1 text-lg font-semibold tracking-tight text-ink">Default monthly dues</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-soft">
-            Save one fixed rate or area-based rate for the whole community. Saving applies it to every existing resident and future account.
+            Save one fixed rate or area-based rate for the whole community. Saving applies it to every property without a custom property rate.
           </p>
         </div>
         <div className="mt-2 rounded-xl bg-surface/70 px-3 py-2 text-xs text-ink-soft sm:mt-0">
-          <span className="font-semibold text-ink">{overrideCount}</span> custom rate{overrideCount === 1 ? '' : 's'} will be replaced
-          {duesMode === 'PerArea' && <span className="block"><span className="font-semibold text-ink">{missingAreaCount}</span> resident{missingAreaCount === 1 ? '' : 's'} need lot area</span>}
+          <span className="font-semibold text-ink">{overrideCount}</span> custom property rate{overrideCount === 1 ? '' : 's'} will be replaced
+          {duesMode === 'PerArea' && <span className="block"><span className="font-semibold text-ink">{missingAreaCount}</span> propert{missingAreaCount === 1 ? 'y needs' : 'ies need'} lot area</span>}
         </div>
       </div>
 
@@ -69,8 +69,8 @@ export default function CommunityDuesSettings({
           {pending ? 'Saving…' : 'Save community rate'}
         </button>
       </form>
-      {duesMode === 'PerArea' && <p className="mt-2 text-[11px] text-ink-muted">Each resident’s monthly amount is the rate multiplied by their lot area. Residents without an area set won’t be charged until it’s entered.</p>}
-      {rate === 0 && <p className="mt-2 text-[11px] text-warning">No community rate is set yet, so residents without a custom override won’t receive an automatic monthly charge.</p>}
+      {duesMode === 'PerArea' && <p className="mt-2 text-[11px] text-ink-muted">Each property’s monthly amount is the rate multiplied by its lot area. Properties without an area set won’t be charged until it’s entered.</p>}
+      {rate === 0 && <p className="mt-2 text-[11px] text-warning">No community rate is set yet, so properties without a custom override won’t receive an automatic monthly charge.</p>}
       {message && <p role="status" className="mt-3 text-xs font-medium text-brand-strong">{message}</p>}
       {error && <p role="alert" className="mt-3 text-xs font-medium text-danger">{error}</p>}
     </section>

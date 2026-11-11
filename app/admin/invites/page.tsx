@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import NewInviteButton from '@/components/admin/residents/NewInviteButton';
+import ImportResidentsButton from '@/components/admin/residents/ImportResidentsButton';
 import ResidentsTable from '@/components/admin/residents/ResidentsTable';
 import CommunityDuesSettings from '@/components/admin/residents/CommunityDuesSettings';
 import { getServerSession } from 'next-auth';
@@ -10,14 +11,23 @@ export default async function InvitesPage() {
   const currentAdminId = (session?.user as any)?.id as string;
 
   const [homeowners, duesSettings] = await Promise.all([
-    prisma.homeowner.findMany({ orderBy: { createdAt: 'desc' } }),
+    prisma.homeowner.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { property: true },
+    }),
     prisma.duesSettings.findUnique({ where: { id: 1 } }),
   ]);
   const communityMode = duesSettings?.monthlyDuesMode ?? 'Fixed';
   const communityRate = Number(duesSettings?.monthlyDuesRate ?? 0);
+  const properties = [
+    ...new Map(homeowners.map((homeowner) => [homeowner.propertyId, homeowner.property])).values(),
+  ];
 
   const serialized = homeowners.map((h) => ({
     id: h.id,
+    propertyId: h.propertyId,
+    propertyNeedsReview: h.property.needsReview,
+    isPrimaryVoter: h.property.primaryVoterId === h.id,
     fullName: h.fullName,
     email: h.email,
     unit: h.unit,
@@ -26,10 +36,10 @@ export default async function InvitesPage() {
     invitedAt: h.invitedAt?.toISOString() ?? null,
     createdAt: h.createdAt.toISOString(),
     isAdmin: h.isAdmin,
-    lotAreaSqm: h.lotAreaSqm === null ? null : Number(h.lotAreaSqm),
-    monthlyDuesMode: h.duesRateOverride ? h.monthlyDuesMode : communityMode,
-    monthlyDuesRate: h.duesRateOverride ? Number(h.monthlyDuesRate) : communityRate,
-    duesRateOverride: h.duesRateOverride,
+    lotAreaSqm: h.property.lotAreaSqm === null ? null : Number(h.property.lotAreaSqm),
+    monthlyDuesMode: h.property.duesRateOverride ? h.property.monthlyDuesMode : communityMode,
+    monthlyDuesRate: h.property.duesRateOverride ? Number(h.property.monthlyDuesRate) : communityRate,
+    duesRateOverride: h.property.duesRateOverride,
   }));
 
   return (
@@ -42,16 +52,22 @@ export default async function InvitesPage() {
             Manage resident accounts, invitations, access, and monthly dues rates.
           </p>
         </div>
-        <NewInviteButton requiresLotArea={communityMode === 'PerArea'} />
+        <div className="flex flex-wrap gap-2">
+          <ImportResidentsButton requiresLotArea={communityMode === 'PerArea'} />
+          <NewInviteButton requiresLotArea={communityMode === 'PerArea'} />
+        </div>
       </header>
       <CommunityDuesSettings
         mode={communityMode}
         rate={communityRate}
-        overrideCount={homeowners.filter((h) => h.duesRateOverride).length}
-        missingAreaCount={homeowners.filter((h) => (!h.duesRateOverride || h.monthlyDuesMode === 'PerArea') && !h.lotAreaSqm).length}
+        overrideCount={properties.filter((property) => property.duesRateOverride).length}
+        missingAreaCount={properties.filter((property) => {
+          const mode = property.duesRateOverride ? property.monthlyDuesMode : communityMode;
+          return mode === 'PerArea' && !property.lotAreaSqm;
+        }).length}
       />
       <p className="-mt-2 text-xs text-ink-muted">
-        Per-resident exceptions can be set from <span className="font-semibold text-ink-soft">Actions → Edit details</span>. Monthly assessments are created on the first of each month.
+        Dues settings are shared by everyone linked to a property. Set a property&apos;s primary voter from its resident actions. Monthly assessments are created on the first of each month.
       </p>
       <ResidentsTable homeowners={serialized} currentAdminId={currentAdminId} />
     </div>

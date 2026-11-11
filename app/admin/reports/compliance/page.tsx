@@ -4,23 +4,41 @@ import ComplianceTable from '@/app/admin/reports/ComplianceTable';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 export default async function ComplianceReportPage() {
-  const homeowners = await prisma.homeowner.findMany({
-    where: { passwordHash: { not: null } },
-    include: { duesCharges: { where: { status: { not: 'Paid' } } } },
-    orderBy: { fullName: 'asc' },
+  const properties = await prisma.property.findMany({
+    where: { homeowners: { some: { passwordHash: { not: null } } } },
+    include: {
+      homeowners: {
+        where: { passwordHash: { not: null } },
+        include: { duesCharges: { where: { status: { not: 'Paid' } } } },
+        orderBy: { fullName: 'asc' },
+      },
+    },
   });
 
-  const rows = homeowners
-    .map((h) => {
-      const owed = h.duesCharges.reduce(
+  const rows = properties
+    .map((property) => {
+      const representative =
+        property.homeowners.find((homeowner) => homeowner.id === property.primaryVoterId) ??
+        property.homeowners[0];
+      if (!representative) return null;
+      const charges = property.homeowners.flatMap((homeowner) => homeowner.duesCharges);
+      const owed = charges.reduce(
         (sum, c) => sum + (Number(c.amount) - Number(c.amountPaid)),
         0,
       );
-      const hasOverdue = h.duesCharges.some((c) => c.status === 'Overdue');
+      const hasOverdue = charges.some((c) => c.status === 'Overdue');
       const status: 'Paid up' | 'Overdue' | 'Outstanding' =
         owed <= 0 ? 'Paid up' : hasOverdue ? 'Overdue' : 'Outstanding';
-      return { id: h.id, fullName: h.fullName, unit: h.unit, email: h.email, owed, status };
+      return {
+        id: property.id,
+        fullName: representative.fullName,
+        unit: property.unit,
+        email: representative.email,
+        owed,
+        status,
+      };
     })
+    .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) => b.owed - a.owed);
 
   return (

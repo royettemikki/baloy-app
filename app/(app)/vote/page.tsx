@@ -86,19 +86,49 @@ export default async function VotePage() {
 
   const closesAt = votable.closesAt;
 
-  const myVotes = await prisma.vote.findMany({
-    where: { homeownerId, position: { electionId: votable.id } },
-    include: { position: true, candidate: true },
+  const homeowner = await prisma.homeowner.findUnique({
+    where: { id: homeownerId },
+    select: {
+      propertyId: true,
+      property: { select: { primaryVoterId: true, unit: true } },
+    },
   });
+  if (homeowner?.property.primaryVoterId !== homeownerId) {
+    return (
+      <div>
+        <AutoRefresh />
+        {quickLinks}
+        <div className="mx-auto max-w-lg rounded-2xl border border-line bg-surface p-6 text-center shadow-sm">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-soft">
+            <IconBallot width={21} height={21} className="text-purple" />
+          </div>
+          <h1 className="text-lg font-semibold text-ink">Voting access is assigned to your property&apos;s primary voter</h1>
+          <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+            An administrator must designate the resident authorized to vote for {homeowner?.property.unit ?? 'your property'}.
+            Contact your community administrator if this should be you.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  const allVoted = votable.positions.length > 0 && myVotes.length >= votable.positions.length;
+  const myVotes = await prisma.vote.findMany({
+    where: { propertyId: homeowner.propertyId, position: { electionId: votable.id } },
+    include: { position: true, candidate: true },
+    orderBy: [{ castAt: 'asc' }, { id: 'asc' }],
+  });
+  const votesByPosition = new Map(myVotes.map((vote) => [vote.positionId, vote]));
+  const propertyVotes = [...votesByPosition.values()];
+
+  const allVoted =
+    votable.positions.length > 0 && propertyVotes.length >= votable.positions.length;
 
   if (allVoted) {
     return (
       <div>
         <AutoRefresh />
         {quickLinks}
-        <BallotSummary electionTitle={votable.title} closesAt={closesAt} votes={myVotes} />
+        <BallotSummary electionTitle={votable.title} closesAt={closesAt} votes={propertyVotes} />
       </div>
     );
   }
@@ -112,7 +142,7 @@ export default async function VotePage() {
       <div className="min-h-0 flex-1">
         <VoteWizard
           election={{ ...votable, closesAt: closesAt.toISOString() }}
-          votedPositionIds={myVotes.map((v) => v.positionId)}
+          votedPositionIds={propertyVotes.map((vote) => vote.positionId)}
         />
       </div>
     </div>

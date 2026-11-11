@@ -13,10 +13,20 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
   const homeownerId = (session?.user as any)?.id as string | undefined;
   if (!homeownerId) redirect('/login');
 
+  const account = await prisma.homeowner.findUnique({
+    where: { id: homeownerId },
+    select: { propertyId: true },
+  });
+  if (!account) notFound();
+
   const paymentId = Number(params.id);
   const payment = paymentId
     ? await prisma.payment.findFirst({
-        where: { id: paymentId, homeownerId, status: 'Confirmed' },
+        where: {
+          id: paymentId,
+          status: 'Confirmed',
+          homeowner: { propertyId: account.propertyId },
+        },
         include: { homeowner: true },
       })
     : null;

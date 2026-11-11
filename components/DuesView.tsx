@@ -55,7 +55,7 @@ export default function DuesView({
         <div className="mb-3 flex items-start gap-2.5 rounded-2xl bg-brand-soft/60 px-4 py-3 shadow-sm">
           <IconCheck width={16} height={16} className="mt-0.5 shrink-0 text-brand-strong" />
           <p className="text-xs leading-relaxed text-brand-strong">
-            {currency(creditBalance)} account credit will automatically apply to your next charge.
+            {currency(creditBalance)} property credit will automatically apply to the next assessment.
           </p>
         </div>
       )}

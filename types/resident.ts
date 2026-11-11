@@ -1,5 +1,8 @@
 export type Resident = {
   id: string;
+  propertyId: string;
+  propertyNeedsReview: boolean;
+  isPrimaryVoter: boolean;
   fullName: string;
   email: string;
   unit: string;

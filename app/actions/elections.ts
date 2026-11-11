@@ -1,5 +1,6 @@
 'use server';
 
+import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -36,6 +37,15 @@ export async function castBallotAction(selections: { positionId: number; candida
     return { error: 'One of your selections is invalid.' };
   }
 
+  const homeowner = await prisma.homeowner.findUnique({
+    where: { id: homeownerId },
+    select: { propertyId: true, property: { select: { primaryVoterId: true } } },
+  });
+  if (!homeowner) return { error: 'Resident account not found.' };
+  if (homeowner.property.primaryVoterId !== homeownerId) {
+    return { error: "Only the property's primary voter can submit its ballot." };
+  }
+
   const selectedPositionIds = selections.map(({ positionId }) => positionId);
   if (new Set(selectedPositionIds).size !== selectedPositionIds.length) {
     return { error: 'Choose one candidate for each position.' };
@@ -55,7 +65,7 @@ export async function castBallotAction(selections: { positionId: number; candida
     select: { id: true },
   });
   const previousVotes = await prisma.vote.findMany({
-    where: { homeownerId, position: { electionId: firstPosition.electionId } },
+    where: { propertyId: homeowner.propertyId, position: { electionId: firstPosition.electionId } },
     select: { positionId: true },
   });
   const expectedPositionIds = electionPositions
@@ -63,10 +73,7 @@ export async function castBallotAction(selections: { positionId: number; candida
     .filter((id) => !previousVotes.some((vote) => vote.positionId === id))
     .sort((a, b) => a - b);
 
-  if (
-    [...selectedPositionIds].sort((a, b) => a - b).join(',') !==
-    expectedPositionIds.join(',')
-  ) {
+  if ([...selectedPositionIds].sort((a, b) => a - b).join(',') !== expectedPositionIds.join(',')) {
     return { error: 'Submit one selection for every position remaining on your ballot.' };
   }
 
@@ -82,17 +89,35 @@ export async function castBallotAction(selections: { positionId: number; candida
     const candidate = await prisma.candidate.findFirst({ where: { id: candidateId, positionId } });
     if (!candidate) return { error: 'One of your selections is invalid.' };
 
-    const existing = await prisma.vote.findUnique({
-      where: { positionId_homeownerId: { positionId, homeownerId } },
+    const existing = await prisma.vote.findFirst({
+      where: { positionId, propertyId: homeowner.propertyId },
     });
     if (existing) return { error: 'You have already voted for one of these positions.' };
   }
 
-  await prisma.$transaction(
-    selections.map(({ positionId, candidateId }) =>
-      prisma.vote.create({ data: { positionId, candidateId, homeownerId } }),
-    ),
-  );
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const { positionId, candidateId } of selections) {
+        const propertyBallot = await tx.propertyBallot.create({
+          data: { positionId, propertyId: homeowner.propertyId },
+        });
+        await tx.vote.create({
+          data: {
+            positionId,
+            candidateId,
+            homeownerId,
+            propertyId: homeowner.propertyId,
+            propertyBallotId: propertyBallot.id,
+          },
+        });
+      }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return { error: 'Your property ballot was submitted already. Refresh to see its status.' };
+    }
+    throw error;
+  }
 
   return { success: true };
 }

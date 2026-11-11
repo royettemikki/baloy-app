@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import PaymentInstructions from '@/components/PaymentInstructions';
+import { getPropertyResidentIds } from '@/lib/propertyAccess';
 
 export default async function PayPage() {
   const session = await getServerSession(authOptions);
@@ -11,9 +12,11 @@ export default async function PayPage() {
   if (!homeownerId) {
     redirect('/login');
   }
+  const residentIds = await getPropertyResidentIds(homeownerId);
+  if (!residentIds) redirect('/login');
 
   const charges = await prisma.duesCharge.findMany({
-    where: { homeownerId, status: { in: ['Due', 'Overdue'] } },
+    where: { homeownerId: { in: residentIds }, status: { in: ['Due', 'Overdue'] } },
   });
 
   const remainingAmount = charges.reduce(

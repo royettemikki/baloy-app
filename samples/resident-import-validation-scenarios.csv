@@ -1,0 +1,22 @@
+Full Name,Email,Unit,Lot Area Sqm
+Maria Santos,import.new.property@example.com,Block 21 Lot 1,80
+Jose Miguel Santos,import.shared.property@example.com," block   21 LOT 1 ",80
+"Daniel Reyes, Jr.",import.quoted.name@example.com,Block 21 Lot 2,92.5
+Andrea Cruz,import.conflicting.area@example.com,block 21 lot 1,81
+,import.missing.name@example.com,Block 21 Lot 3,75
+Paolo Garcia,,Block 21 Lot 4,88
+Camille Flores,not-an-email,Block 21 Lot 5,82
+Rafael Navarro,import.missing.unit@example.com,,77
+Bea Ramirez,duplicate.import@example.com,Block 21 Lot 6,71
+Miguel Torres, DUPLICATE.IMPORT@example.com ,Block 21 Lot 7,74
+Patricia Mendoza,replace-with-existing-resident-email@example.com,Block 21 Lot 8,83
+Carla Villanueva,import.area.text@example.com,Block 21 Lot 9,not-a-number
+Josefina Lim,import.area.zero@example.com,Block 21 Lot 10,0
+Marco Dela Cruz,import.area.negative@example.com,Block 21 Lot 11,-12
+Sofia Bautista,import.area.precision@example.com,Block 21 Lot 12,45.678
+Enzo Castillo,import.area.too.large@example.com,Block 21 Lot 13,100000000
+Isabella Fernandez,import.area.missing@example.com,Block 21 Lot 14,
+Adrian Villanueva,import.unit.too.long@example.com,Block 21 Lot 15 With Extra Words For Length,90
+"Alejandro Miguel Rafael de la Cruz Santos Bautista Fernandez Villanueva Mendoza Garcia Reyes Navarro Flores Ramirez Torres Castillo Lim Aquino Mercado Santiago del Rosario de los Angeles",import.name.too.long@example.com,Block 21 Lot 16,90
+Gabriela Ramos,import.existing.property@example.com,REPLACE_WITH_EXISTING_UNIT,999
+Luis Fernando Bautista,import.fixed.no.area@example.com,Block 21 Lot 17,

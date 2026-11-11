@@ -1,4 +1,5 @@
 import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import AutoRefresh from '@/components/AutoRefresh';
@@ -14,26 +15,32 @@ export default async function DuesPage() {
   // Keep the current month's assessment visible even if a scheduled job was delayed.
   await ensureCurrentMonthDues();
 
-  const [charges, homeowner, receipts, latestPayment, chargesTotal, receiptsTotal] =
+  const homeowner = await prisma.homeowner.findUnique({
+    where: { id: homeownerId },
+    select: { property: { select: { id: true, creditBalance: true, homeowners: { select: { id: true } } } } },
+  });
+  if (!homeowner) redirect('/login');
+  const residentIds = homeowner.property.homeowners.map((resident) => resident.id);
+
+  const [charges, receipts, latestPayment, chargesTotal, receiptsTotal] =
     await Promise.all([
       prisma.duesCharge.findMany({
-        where: { homeownerId },
+        where: { homeownerId: { in: residentIds } },
         orderBy: { dueDate: 'desc' },
         take: PREVIEW_COUNT,
       }),
-      prisma.homeowner.findUnique({ where: { id: homeownerId } }),
       prisma.payment.findMany({
-        where: { homeownerId, status: 'Confirmed' },
+        where: { homeownerId: { in: residentIds }, status: 'Confirmed' },
         orderBy: { confirmedAt: 'desc' },
         take: PREVIEW_COUNT,
       }),
-      prisma.payment.findFirst({ where: { homeownerId }, orderBy: { submittedAt: 'desc' } }),
-      prisma.duesCharge.count({ where: { homeownerId } }),
-      prisma.payment.count({ where: { homeownerId, status: 'Confirmed' } }),
+      prisma.payment.findFirst({ where: { homeownerId: { in: residentIds } }, orderBy: { submittedAt: 'desc' } }),
+      prisma.duesCharge.count({ where: { homeownerId: { in: residentIds } } }),
+      prisma.payment.count({ where: { homeownerId: { in: residentIds }, status: 'Confirmed' } }),
     ]);
 
   const allOpenCharges = await prisma.duesCharge.findMany({
-    where: { homeownerId, status: { not: 'Paid' } },
+    where: { homeownerId: { in: residentIds }, status: { not: 'Paid' } },
   });
 
   const serialized = charges.map((c) => ({
@@ -56,7 +63,7 @@ export default async function DuesPage() {
     (sum, c) => sum + (Number(c.amount) - Number(c.amountPaid)),
     0,
   );
-  const creditBalance = Number(homeowner?.creditBalance ?? 0);
+  const creditBalance = Number(homeowner.property.creditBalance);
 
   return (
     <>

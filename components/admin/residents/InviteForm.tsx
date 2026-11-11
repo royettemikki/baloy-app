@@ -63,6 +63,9 @@ export default function InviteForm({ requiresLotArea = false }: { requiresLotAre
       </div>
       <div>
         <Input label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)} required />
+        <p className="mt-1 text-[11px] text-ink-muted">
+          Reusing a unit links this resident to that property and its dues history.
+        </p>
       </div>
       <div>
         <Input

@@ -33,6 +33,16 @@ function ResidentBadges({ homeowner }: { homeowner: Resident }) {
           Admin
         </span>
       )}
+      {homeowner.isPrimaryVoter && (
+        <span className="rounded-pill bg-purple-soft px-2.5 py-1 text-[11px] font-medium text-purple">
+          Primary voter
+        </span>
+      )}
+      {homeowner.propertyNeedsReview && (
+        <span className="rounded-pill bg-warning-soft px-2.5 py-1 text-[11px] font-medium text-warning">
+          Review property setup
+        </span>
+      )}
     </div>
   );
 }
@@ -71,7 +81,7 @@ function ResidentMobileCard({
       <div className="mt-3 rounded-xl bg-surface-muted px-3 py-2">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Monthly dues</p>
         <p className="mt-0.5 text-sm font-semibold text-ink">{monthlyDuesLabel(homeowner)}</p>
-        <p className="text-[10px] text-ink-muted">{homeowner.duesRateOverride ? 'Custom resident rate' : 'Community default'}</p>
+        <p className="text-[10px] text-ink-muted">{homeowner.duesRateOverride ? 'Custom property rate' : 'Community default'}</p>
         {homeowner.monthlyDuesMode === 'PerArea' && homeowner.lotAreaSqm && <p className="text-[11px] text-ink-muted">{homeowner.lotAreaSqm} m² × ₱{homeowner.monthlyDuesRate.toFixed(2)} / m²</p>}
       </div>
 
@@ -112,9 +122,9 @@ export default function ResidentsTable({
 
   const activeCount = homeowners.filter((h) => h.passwordHash).length;
   const pendingCount = homeowners.length - activeCount;
-  const duesUnconfiguredCount = homeowners.filter((h) =>
+  const duesUnconfiguredCount = new Set(homeowners.filter((h) =>
     h.passwordHash && (h.monthlyDuesRate <= 0 || (h.monthlyDuesMode === 'PerArea' && !h.lotAreaSqm)),
-  ).length;
+  ).map((homeowner) => homeowner.propertyId)).size;
   const filtered = searched.filter((h) =>
     statusFilter === 'All' || (statusFilter === 'Active' ? !!h.passwordHash : !h.passwordHash),
   );
@@ -230,7 +240,7 @@ export default function ResidentsTable({
                   <td className="px-5 py-3.5">
                     <p className={`text-sm font-medium ${h.monthlyDuesRate > 0 ? 'text-ink' : 'text-warning'}`}>{monthlyDuesLabel(h)}</p>
                     {h.monthlyDuesMode === 'PerArea' && h.lotAreaSqm && <p className="text-xs text-ink-muted">{h.lotAreaSqm} m² × ₱{h.monthlyDuesRate.toFixed(2)}</p>}
-                    <p className="text-[10px] text-ink-muted">{h.duesRateOverride ? 'Custom rate' : 'Community default'}</p>
+                    <p className="text-[10px] text-ink-muted">{h.duesRateOverride ? 'Custom property rate' : 'Community default'}</p>
                   </td>
                   <td className="px-5 py-3.5">
                     <ResidentBadges homeowner={h} />
