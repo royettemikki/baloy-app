@@ -33,7 +33,9 @@ export default function AdminMobileShell({
         onClose={() => setMobileOpen(false)}
         counts={counts}
       />
-      <div className={`flex min-h-screen min-w-0 flex-1 flex-col md:ml-[240px] ${isDashboard ? 'bg-transparent' : 'bg-surface-muted'}`}>
+      <div
+        className={`flex min-h-screen min-w-0 flex-1 flex-col md:ml-[240px] ${isDashboard ? 'bg-transparent' : 'bg-surface-muted'}`}
+      >
         <AdminHeaderSlot fullName={fullName} onMenuClick={() => setMobileOpen(true)} />
         <main className={`flex-1 px-4 py-6 md:px-8 md:py-8 ${isDashboard ? 'bg-transparent' : ''}`}>
           <div className="mx-auto w-full max-w-[1440px]">{children}</div>

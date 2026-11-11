@@ -96,7 +96,7 @@ export default async function HomePage() {
   const needsAction = balance > 0 || (!!openElection && !alreadyVoted);
 
   return (
-    <div className="animate-fadeInUp space-y-2 pb-4">
+    <div className="space-y-2 pb-4">
       <header className="border-line/70 bg-surface/95 fixed inset-x-0 top-0 z-40 mx-auto flex h-[68px] w-full max-w-[calc(64rem+2.5rem)] items-center justify-between border-b px-5 py-3 shadow-sm backdrop-blur-xl sm:top-5 sm:h-[72px] sm:w-[calc(100%-2rem)] sm:max-w-[calc(64rem+3.5rem)] sm:rounded-t-2xl sm:px-7 lg:top-6 lg:h-[72px] lg:w-[calc(100%-3rem)] lg:max-w-[calc(64rem+5rem)] lg:px-10">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-on-brand shadow-sm">

@@ -3,6 +3,9 @@ module.exports = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+      },
       colors: {
         // Brand tokens: driven by CSS variables so each client organization
         // can override them at runtime (see app/globals.css).

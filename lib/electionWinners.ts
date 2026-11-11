@@ -8,6 +8,7 @@ export async function getPositionWinnerIds(positionId: number): Promise<number[]
   if (!position) return [];
 
   return [...position.candidates]
+    .filter((candidate) => candidate.votes.length > 0)
     .sort((a, b) => b.votes.length - a.votes.length || a.id - b.id)
     .slice(0, position.seats)
     .map((c) => c.id);
@@ -49,6 +50,7 @@ export async function getCurrentOfficeholders(): Promise<Officeholder[]> {
       seenTitles.add(position.title);
 
       const winnerIds = [...position.candidates]
+        .filter((candidate) => candidate.votes.length > 0)
         .sort((a, b) => b.votes.length - a.votes.length || a.id - b.id)
         .slice(0, position.seats)
         .map((c) => c.id);

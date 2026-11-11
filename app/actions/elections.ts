@@ -319,3 +319,33 @@ export async function startVotingAction(electionId: number) {
   revalidatePath('/admin/elections');
   return { success: true };
 }
+
+export async function endVotingAction(electionId: number) {
+  const admin = await getAdminOrNull();
+  if (!admin) return { error: 'You do not have permission to do this.' };
+
+  const election = await prisma.election.findUnique({ where: { id: electionId } });
+  if (!election) return { error: 'Election not found.' };
+
+  const now = new Date();
+  if (!isVotingOpen(election, now)) {
+    return { error: 'Voting is not currently open for this election.' };
+  }
+
+  const closed = await prisma.election.updateMany({
+    where: {
+      id: electionId,
+      votingOpensAt: { not: null },
+      closesAt: { gt: now },
+    },
+    data: { closesAt: now },
+  });
+  if (closed.count !== 1) {
+    return { error: 'Voting is no longer open for this election.' };
+  }
+
+  revalidatePath('/admin/elections');
+  revalidatePath('/results');
+  revalidatePath('/vote');
+  return { success: true };
+}

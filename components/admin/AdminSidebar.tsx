@@ -12,6 +12,7 @@ import {
   IconBarChart,
   IconTrash,
 } from '@/components/Icons';
+import CopyrightFooter from '@/components/CopyrightFooter';
 
 type Counts = {
   pendingInvites: number;
@@ -28,7 +29,12 @@ function getGroups(isDev: boolean, counts: Counts) {
   const manage = [
     { href: '/admin/invites', label: 'Residents', Icon: IconUser, badge: counts.pendingInvites },
     { href: '/admin/payments', label: 'Payments', Icon: IconCard, badge: counts.pendingPayments },
-    { href: '/admin/expenses', label: 'Expenses', Icon: IconFileText, badge: counts.pendingExpenses },
+    {
+      href: '/admin/expenses',
+      label: 'Expenses',
+      Icon: IconFileText,
+      badge: counts.pendingExpenses,
+    },
     { href: '/admin/reports', label: 'Reports', Icon: IconBarChart },
   ];
   return {
@@ -83,7 +89,9 @@ export default function AdminSidebar({
             className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
               active ? 'bg-on-brand-subtle text-on-brand' : 'bg-surface-muted text-ink-soft'
             }`}
-          >            {badge}
+          >
+            {' '}
+            {badge}
           </span>
         )}
       </Link>
@@ -95,12 +103,12 @@ export default function AdminSidebar({
       {mobileOpen && <div className="fixed inset-0 z-40 bg-overlay md:hidden" onClick={onClose} />}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen min-h-screen w-[240px] flex-shrink-0 flex-col border-r border-line/70 bg-surface theme-dark:border-white/[0.045] px-3 py-5 transition-transform duration-200 md:translate-x-0 ${
+        className={`border-line/70 theme-dark:border-white/[0.045] fixed left-0 top-0 z-50 flex h-screen min-h-screen w-[240px] flex-shrink-0 flex-col border-r bg-surface px-3 py-5 transition-transform duration-200 md:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="mb-7 flex items-center gap-2 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-strong ring-1 ring-brand/10">
+          <div className="ring-brand/10 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-strong ring-1">
             <IconGrid width={16} height={16} />
           </div>
           <div>
@@ -109,8 +117,10 @@ export default function AdminSidebar({
           </div>
         </div>
 
-        <nav className="flex flex-col gap-0.5">
-          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted">Main</p>
+        <nav className="flex flex-1 flex-col gap-0.5">
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+            Main
+          </p>
           {main.map(renderLink)}
 
           <p className="mb-2 mt-6 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
@@ -118,6 +128,10 @@ export default function AdminSidebar({
           </p>
           {manage.map(renderLink)}
         </nav>
+        <CopyrightFooter
+          showAllRightsReserved
+          className="border-line/60 mt-6 border-t pt-3 text-[9px] leading-relaxed"
+        />
       </aside>
     </>
   );

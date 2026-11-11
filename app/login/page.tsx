@@ -9,7 +9,7 @@ export default async function LoginPage() {
   if (session) redirect('/home');
 
   return (
-    <AuthShell>
+    <AuthShell showCopyright>
       <LoginForm />
     </AuthShell>
   );
