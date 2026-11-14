@@ -19,6 +19,7 @@ export type Officeholder = {
   positionTitle: string;
   homeownerId: string;
   fullName: string;
+  avatarUrl: string | null;
   unit: string;
   electionId: number;
   electionTitle: string;
@@ -69,6 +70,7 @@ export async function getCurrentOfficeholders(): Promise<Officeholder[]> {
             positionTitle: position.title,
             homeownerId: candidate.homeownerId,
             fullName: candidate.homeowner.fullName,
+            avatarUrl: candidate.homeowner.avatarUrl,
             unit: candidate.homeowner.unit,
             electionId: election.id,
             electionTitle: election.title,

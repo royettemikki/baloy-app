@@ -19,7 +19,12 @@ export default async function VotePage() {
       orderBy: { opensAt: 'desc' },
       include: {
         positions: {
-          include: { candidates: { include: { slate: true }, orderBy: { ballotNumber: 'asc' } } },
+          include: {
+            candidates: {
+              include: { slate: true, homeowner: { select: { avatarUrl: true } } },
+              orderBy: { ballotNumber: 'asc' },
+            },
+          },
         },
       },
     }),
@@ -85,6 +90,17 @@ export default async function VotePage() {
   }
 
   const closesAt = votable.closesAt;
+  const electionWithCandidateAvatars = {
+    ...votable,
+    positions: votable.positions.map((position) => ({
+      ...position,
+      candidates: position.candidates.map((candidate) => ({
+        ...candidate,
+        homeownerAvatarUrl: candidate.homeowner?.avatarUrl ?? null,
+      })),
+    })),
+    closesAt: closesAt.toISOString(),
+  };
 
   const homeowner = await prisma.homeowner.findUnique({
     where: { id: homeownerId },
@@ -117,10 +133,19 @@ export default async function VotePage() {
 
   const myVotes = await prisma.vote.findMany({
     where: { propertyId: homeowner.propertyId, position: { electionId: votable.id } },
-    include: { position: true, candidate: true },
+    include: {
+      position: true,
+      candidate: { include: { homeowner: { select: { avatarUrl: true } } } },
+    },
     orderBy: [{ castAt: 'asc' }, { id: 'asc' }],
   });
-  const propertyVotes = myVotes;
+  const propertyVotes = myVotes.map((vote) => ({
+    ...vote,
+    candidate: {
+      ...vote.candidate,
+      homeownerAvatarUrl: vote.candidate.homeowner?.avatarUrl ?? null,
+    },
+  }));
   const votedPositionIds = [...new Set(propertyVotes.map((vote) => vote.positionId))];
 
   const allVoted =
@@ -144,7 +169,7 @@ export default async function VotePage() {
       </div>
       <div className="min-h-0 flex-1">
         <VoteWizard
-          election={{ ...votable, closesAt: closesAt.toISOString() }}
+          election={electionWithCandidateAvatars}
           votedPositionIds={votedPositionIds}
         />
       </div>

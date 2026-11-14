@@ -17,30 +17,35 @@ export default async function DuesPage() {
 
   const homeowner = await prisma.homeowner.findUnique({
     where: { id: homeownerId },
-    select: { property: { select: { id: true, creditBalance: true, homeowners: { select: { id: true } } } } },
+    select: {
+      property: { select: { id: true, creditBalance: true, homeowners: { select: { id: true } } } },
+    },
   });
   if (!homeowner) redirect('/login');
   const residentIds = homeowner.property.homeowners.map((resident) => resident.id);
 
-  const [charges, receipts, latestPayment, chargesTotal, receiptsTotal] =
-    await Promise.all([
-      prisma.duesCharge.findMany({
-        where: { homeownerId: { in: residentIds } },
-        orderBy: { dueDate: 'desc' },
-        take: PREVIEW_COUNT,
-      }),
-      prisma.payment.findMany({
-        where: { homeownerId: { in: residentIds }, status: 'Confirmed' },
-        orderBy: { confirmedAt: 'desc' },
-        take: PREVIEW_COUNT,
-      }),
-      prisma.payment.findFirst({ where: { homeownerId: { in: residentIds } }, orderBy: { submittedAt: 'desc' } }),
-      prisma.duesCharge.count({ where: { homeownerId: { in: residentIds } } }),
-      prisma.payment.count({ where: { homeownerId: { in: residentIds }, status: 'Confirmed' } }),
-    ]);
+  const [charges, receipts, latestPayment, chargesTotal, receiptsTotal] = await Promise.all([
+    prisma.duesCharge.findMany({
+      where: { homeownerId: { in: residentIds } },
+      orderBy: { dueDate: 'desc' },
+      take: PREVIEW_COUNT,
+    }),
+    prisma.payment.findMany({
+      where: { homeownerId: { in: residentIds }, status: 'Confirmed' },
+      orderBy: { confirmedAt: 'desc' },
+      take: PREVIEW_COUNT,
+    }),
+    prisma.payment.findFirst({
+      where: { homeownerId: { in: residentIds } },
+      orderBy: { submittedAt: 'desc' },
+    }),
+    prisma.duesCharge.count({ where: { homeownerId: { in: residentIds } } }),
+    prisma.payment.count({ where: { homeownerId: { in: residentIds }, status: 'Confirmed' } }),
+  ]);
 
   const allOpenCharges = await prisma.duesCharge.findMany({
     where: { homeownerId: { in: residentIds }, status: { not: 'Paid' } },
+    orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
   });
 
   const serialized = charges.map((c) => ({
@@ -64,6 +69,17 @@ export default async function DuesPage() {
     0,
   );
   const creditBalance = Number(homeowner.property.creditBalance);
+  const dueBreakdown = allOpenCharges
+    .map((charge) => ({
+      id: charge.id,
+      description: charge.description,
+      dueDate: charge.dueDate.toISOString(),
+      amount: Number(charge.amount),
+      amountPaid: Number(charge.amountPaid),
+      remaining: Number(charge.amount) - Number(charge.amountPaid),
+      status: charge.status as 'Due' | 'Paid' | 'Overdue',
+    }))
+    .filter((charge) => charge.remaining > 0);
 
   return (
     <>
@@ -71,6 +87,7 @@ export default async function DuesPage() {
       <DuesView
         charges={serialized}
         balance={balance}
+        dueBreakdown={dueBreakdown}
         creditBalance={creditBalance}
         receipts={serializedReceipts}
         hasMoreHistory={chargesTotal > PREVIEW_COUNT}

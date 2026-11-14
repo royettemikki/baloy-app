@@ -12,19 +12,13 @@ import { ensureCurrentMonthDues } from '@/lib/monthlyDues';
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
-  const fullName = session?.user?.name ?? 'Resident';
-  const firstName = fullName.split(' ')[0];
-  const initials = fullName
-    .split(' ')
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
   const homeownerId = (session?.user as any)?.id as string;
   const account = await prisma.homeowner.findUnique({
     where: { id: homeownerId },
     select: {
       propertyId: true,
+      avatarUrl: true,
+      fullName: true,
       property: {
         select: {
           unit: true,
@@ -35,6 +29,14 @@ export default async function HomePage() {
     },
   });
   if (!account) redirect('/login');
+  const fullName = account.fullName;
+  const firstName = fullName.split(' ')[0];
+  const initials = fullName
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
   await ensureCurrentMonthDues();
   const residentIds = account.property.homeowners.map((resident) => resident.id);
   const unit = account.property.unit;
@@ -120,15 +122,24 @@ export default async function HomePage() {
   const needsAction = balance > 0 || (!!openElection && isPrimaryVoter && !alreadyVoted);
 
   return (
-    <div className="space-y-2 pb-4">
-      <header className="border-line/70 bg-surface/95 fixed inset-x-0 top-0 z-40 mx-auto flex h-[68px] w-full max-w-[calc(64rem+2.5rem)] items-center justify-between border-b px-5 py-3 shadow-sm backdrop-blur-xl sm:top-5 sm:h-[72px] sm:w-[calc(100%-2rem)] sm:max-w-[calc(64rem+3.5rem)] sm:rounded-t-2xl sm:px-7 lg:top-6 lg:h-[72px] lg:w-[calc(100%-3rem)] lg:max-w-[calc(64rem+5rem)] lg:px-10">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-on-brand shadow-sm">
-            {initials}
-          </div>
+    <div className="space-y-6 pb-4">
+      <header className="flex items-center justify-between gap-4 py-1">
+        <div className="flex min-w-0 items-center gap-3.5 sm:gap-4">
+          {account.avatarUrl ? (
+            <img
+              src={account.avatarUrl}
+              alt={`${fullName}'s profile`}
+              className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-brand-soft sm:h-12 sm:w-12"
+            />
+          ) : (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand-strong sm:h-12 sm:w-12">
+              {initials}
+            </div>
+          )}
           <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold tracking-tight">Good day, {firstName}</h1>
-            <p className="truncate text-xs text-ink-muted">
+            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-strong">Resident portal</p>
+            <h1 className="truncate text-xl font-semibold tracking-tight text-ink sm:text-2xl">Good day, {firstName}</h1>
+            <p className="mt-1 truncate text-xs text-ink-muted sm:text-sm">
               {organization.name}
               {unit ? ` · Unit ${unit}` : ''}
             </p>
@@ -137,21 +148,19 @@ export default async function HomePage() {
         <Link
           href="/notices"
           aria-label="View notices"
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-surface-hover"
         >
-          <IconBell width={17} height={17} className="text-ink-soft" />
+          <IconBell width={18} height={18} />
           {totalNotices > 0 && (
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-danger" />
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accentwarm ring-2 ring-surface" />
           )}
         </Link>
       </header>
 
-      <div aria-hidden="true" className="h-[68px] sm:h-[72px]" />
-
       <section aria-labelledby="overview-heading">
         <div className="mb-3 flex items-end justify-between">
           <div>
-            <h2 id="overview-heading" className="text-base font-semibold">
+            <h2 id="overview-heading" className="text-lg font-semibold">
               Your overview
             </h2>
             <p className="mt-0.5 text-xs text-ink-muted">The things that may need your attention</p>
@@ -162,13 +171,14 @@ export default async function HomePage() {
             </span>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Link
             href="/dues"
-            className={`ui-card-interactive relative overflow-hidden rounded-2xl p-4 shadow-sm ${balance > 0 ? 'bg-warning-soft' : 'bg-brand-soft'}`}
+            className={`ui-card-interactive relative overflow-hidden rounded-[24px] border border-line/60 bg-gradient-to-br p-4 shadow-[0_10px_28px_-20px_var(--brand)] sm:p-5 ${balance > 0 ? 'from-warning-soft to-surface' : 'from-brand-soft to-surface'}`}
           >
+            <span aria-hidden="true" className="pointer-events-none absolute -right-7 -top-8 h-28 w-28 rounded-full border-[18px] border-white/30" />
             <span
-              className={`mb-3 inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${balance > 0 ? 'bg-warning text-white' : 'bg-brand text-on-brand'}`}
+              className={`mb-4 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${balance > 0 ? 'bg-warning text-white' : 'bg-brand text-on-brand'}`}
             >
               {balance > 0 ? 'Payment due' : 'Up to date'}
             </span>
@@ -180,9 +190,10 @@ export default async function HomePage() {
           </Link>
           <Link
             href="/notices"
-            className="ui-card-interactive rounded-2xl bg-accentwarm-soft p-4 shadow-sm"
+            className="ui-card-interactive relative overflow-hidden rounded-[24px] border border-accentwarm/10 bg-gradient-to-br from-accentwarm-soft to-surface p-4 shadow-[0_10px_28px_-20px_var(--accent-warm)] sm:p-5"
           >
-            <span className="mb-3 inline-flex rounded-full bg-accentwarm px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+            <span aria-hidden="true" className="pointer-events-none absolute -right-7 -top-8 h-28 w-28 rounded-full border-[18px] border-white/30" />
+            <span className="mb-4 inline-flex rounded-full bg-accentwarm px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
               Community
             </span>
             <p className="text-xs text-ink-soft">Notices</p>

@@ -6,7 +6,12 @@ type Vote = {
   positionId: number;
   castAt: Date;
   position: { title: string };
-  candidate: { name: string; roleDescription: string };
+  candidate: {
+    name: string;
+    roleDescription: string;
+    photoUrl: string | null;
+    homeownerAvatarUrl: string | null;
+  };
 };
 
 export default function BallotSummary({
@@ -57,14 +62,22 @@ export default function BallotSummary({
           <div className="flex flex-col gap-2">
             {positionVotes.map((vote) => (
               <div key={vote.id} className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-soft text-[12.5px] font-semibold text-brand-strong">
-                  {vote.candidate.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join('')
-                    .toUpperCase()}
-                </div>
+                {vote.candidate.photoUrl || vote.candidate.homeownerAvatarUrl ? (
+                  <img
+                    src={vote.candidate.photoUrl ?? vote.candidate.homeownerAvatarUrl ?? ''}
+                    alt=""
+                    className="h-9 w-9 flex-shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-soft text-[12.5px] font-semibold text-brand-strong">
+                    {vote.candidate.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-medium">{vote.candidate.name}</p>
                   <p className="text-xs text-ink-soft">{vote.candidate.roleDescription}</p>

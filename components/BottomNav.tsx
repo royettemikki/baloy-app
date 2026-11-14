@@ -22,8 +22,8 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center sm:bottom-6 sm:px-4 lg:bottom-8 lg:px-6">
-      <nav aria-label="Main navigation" className="resident-bottom-nav pointer-events-auto flex w-full max-w-[1440px] items-center justify-around border-t border-line/70 bg-surface/90 px-2 py-2 pb-[max(0.625rem,env(safe-area-inset-bottom))] backdrop-blur-2xl sm:rounded-b-[26px] sm:border sm:border-line/70">
+    <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40 flex justify-center px-3 sm:bottom-7 sm:px-4">
+      <nav aria-label="Main navigation" className="resident-bottom-nav pointer-events-auto flex w-full max-w-[620px] items-center justify-around rounded-[24px] border border-line/80 bg-surface/90 px-2 py-2 shadow-[0_12px_36px_rgba(15,35,28,0.16)] backdrop-blur-2xl sm:px-3">
         {tabs.map(({ href, label, Icon }) => {
           const active = pathname === href;
           return (
@@ -31,15 +31,13 @@ export default function BottomNav() {
               key={href}
               href={href}
               aria-current={active ? 'page' : undefined}
-              className={`flex min-w-14 flex-col items-center gap-1 rounded-xl px-2 py-1.5 transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
+              className={`flex min-w-14 flex-col items-center gap-0.5 rounded-2xl px-2.5 py-1.5 transition-all duration-200 ${active ? 'bg-brand-soft' : 'hover:bg-surface-hover'}`}
             >
-              <Icon
-                width={20}
-                height={20}
-                className={`transition-colors duration-150 ${active ? 'text-brand' : 'text-ink-muted'}`}
-              />
+              <span className={`flex h-7 w-10 items-center justify-center rounded-xl transition-colors ${active ? 'text-brand-strong' : 'text-ink-muted'}`}>
+                <Icon width={19} height={19} className="transition-colors duration-150" />
+              </span>
               <span
-                className={`text-[10.5px] transition-colors duration-150 ${active ? 'text-brand font-medium' : 'text-ink-muted'}`}
+                className={`text-[10px] transition-colors duration-150 ${active ? 'font-semibold text-brand-strong' : 'text-ink-muted'}`}
               >
                 {label}
               </span>

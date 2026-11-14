@@ -18,7 +18,11 @@ export default async function ResultsPage() {
         positions: {
           include: {
             candidates: {
-              include: { slate: true, votes: { select: { homeownerId: true } } },
+              include: {
+                slate: true,
+                homeowner: { select: { avatarUrl: true } },
+                votes: { select: { homeownerId: true } },
+              },
             },
           },
         },
@@ -58,6 +62,7 @@ export default async function ResultsPage() {
           id: candidate.id,
           name: candidate.name,
           photoUrl: candidate.photoUrl,
+          homeownerAvatarUrl: candidate.homeowner?.avatarUrl ?? null,
           slate: candidate.slate ? { name: candidate.slate.name, color: candidate.slate.color } : null,
           votes: candidate.votes.length,
         }))

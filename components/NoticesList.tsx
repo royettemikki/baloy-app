@@ -6,6 +6,7 @@ import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
 import { Announcement } from '@/types/announcement';
 import { formatShortDate } from '@/lib/formatDate';
 import { IconMegaphone } from '@/components/Icons';
+import PageHeader from '@/components/PageHeader';
 
 type ListAnnouncement = Pick<
   Announcement,
@@ -20,17 +21,18 @@ export default function NoticesList({ announcements }: { announcements: ListAnno
 
   return (
     <div>
-      <header className="mb-5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Community updates</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">Notices</h1>
-        <p className="mt-1 text-sm text-ink-soft">Updates and important information from your community.</p>
-      </header>
+      <PageHeader
+        eyebrow="Community updates"
+        title="Notices"
+        description="Updates and important information from your community."
+      />
 
       <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
         <button
           onClick={() => setFilter('All')}
-          className={`whitespace-nowrap rounded-pill px-3 py-1.5 text-xs font-medium ${
-            filter === 'All' ? 'bg-brand text-on-brand' : 'bg-surface-muted text-ink-soft'
+          aria-pressed={filter === 'All'}
+          className={`whitespace-nowrap rounded-pill px-3.5 py-2 text-xs font-semibold transition-colors ${
+            filter === 'All' ? 'bg-brand text-on-brand shadow-sm' : 'border border-line/70 bg-surface text-ink-soft hover:bg-surface-hover'
           }`}
         >
           All
@@ -39,8 +41,9 @@ export default function NoticesList({ announcements }: { announcements: ListAnno
           <button
             key={tag}
             onClick={() => setFilter(tag)}
-            className={`whitespace-nowrap rounded-pill px-3 py-1.5 text-xs font-medium ${
-              filter === tag ? 'bg-brand text-on-brand' : 'bg-surface-muted text-ink-soft'
+            aria-pressed={filter === tag}
+            className={`whitespace-nowrap rounded-pill px-3.5 py-2 text-xs font-semibold transition-colors ${
+              filter === tag ? 'bg-brand text-on-brand shadow-sm' : 'border border-line/70 bg-surface text-ink-soft hover:bg-surface-hover'
             }`}
           >
             {tag}
@@ -75,30 +78,37 @@ export default function NoticesList({ announcements }: { announcements: ListAnno
         </div>
       )}
 
-      {visible.map((a) => (
-        <Link
-          key={a.id}
-          href={`/notices/${a.id}`}
-          className="mb-2.5 flex gap-2.5 rounded-2xl bg-surface-muted p-3.5 shadow-sm last:mb-0"
-        >
-          <div
-            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${ANNOUNCEMENT_TAGS[a.tag].bg} ${ANNOUNCEMENT_TAGS[a.tag].fg}`}
-          >
-            {ANNOUNCEMENT_TAGS[a.tag].icon}
-          </div>
-          <div className="flex-1">
-            <div className="mb-0.5 flex items-center gap-1.5">
-              <p className="text-sm font-medium">{a.title}</p>
-            </div>
-            <p className="mb-1.5 text-xs leading-relaxed text-ink-soft">
-              {a.body.length > 90 ? `${a.body.slice(0, 90)}…` : a.body}
-            </p>
-            <p className="text-[11px] text-ink-muted">
-              {a.postedBy} · {formatShortDate(a.postedAt)}
-            </p>
-          </div>
-        </Link>
-      ))}
+      {visible.length > 0 && (
+        <div key={filter} className="space-y-3 animate-fadeInUp">
+          {visible.map((a) => (
+            <Link
+              key={a.id}
+              href={`/notices/${a.id}`}
+              className="group flex gap-3 rounded-[22px] border border-line/70 bg-surface p-4 shadow-[0_10px_30px_-25px_var(--overlay-strong)] transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-[0_16px_34px_-24px_var(--brand)] sm:p-5"
+            >
+              <div
+                className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl ${ANNOUNCEMENT_TAGS[a.tag].bg} ${ANNOUNCEMENT_TAGS[a.tag].fg}`}
+              >
+                {ANNOUNCEMENT_TAGS[a.tag].icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-ink">{a.title}</p>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${ANNOUNCEMENT_TAGS[a.tag].bg} ${ANNOUNCEMENT_TAGS[a.tag].fg}`}>
+                    {a.tag}
+                  </span>
+                </div>
+                <p className="mb-2 text-xs leading-relaxed text-ink-soft">
+                  {a.body.length > 90 ? `${a.body.slice(0, 90)}…` : a.body}
+                </p>
+                <p className="text-[11px] text-ink-muted">
+                  {a.postedBy} · {formatShortDate(a.postedAt)}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

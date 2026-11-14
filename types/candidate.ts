@@ -5,6 +5,7 @@ export type Candidate = {
   name: string;
   roleDescription: string;
   photoUrl: string | null;
+  homeownerAvatarUrl?: string | null;
   statement: string | null;
   ballotNumber: number;
   isIncumbent: boolean;

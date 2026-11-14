@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { claimPaymentAction } from '@/app/actions/dues';
+import { organization } from '@/data/mock';
+import BackLink from '@/components/BackLink';
 
 type Method = 'gcash' | 'bank';
 
@@ -60,8 +62,9 @@ export default function PaymentInstructions({ remainingAmount }: { remainingAmou
 
   return (
     <div>
+      <BackLink href="/dues">Back to dues</BackLink>
       <p className="mb-0.5 text-xs text-ink-muted">Pay your balance</p>
-      <h1 className="mb-1 text-xl font-medium">Millbrook Commons dues</h1>
+      <h1 className="mb-1 text-xl font-medium">{organization.name} dues</h1>
       <p className="mb-5 text-2xl font-medium text-brand">₱{remainingAmount.toFixed(2)} total</p>
 
       <div className="mb-2.5 overflow-hidden rounded-2xl border border-line">

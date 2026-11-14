@@ -3,7 +3,9 @@ import Skeleton from '@/components/Skeleton';
 export default function NoticesLoading() {
   return (
     <div>
-      <Skeleton className="w-24 h-5 mb-3.5" />
+      <Skeleton className="w-28 h-3 mb-2" />
+      <Skeleton className="w-28 h-7 mb-1.5" />
+      <Skeleton className="w-72 max-w-full h-4 mb-5" />
       <div className="flex gap-1.5 mb-4">
         <Skeleton className="w-14 h-7 rounded-pill" />
         <Skeleton className="w-24 h-7 rounded-pill" />

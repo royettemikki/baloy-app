@@ -19,6 +19,8 @@ model Homeowner {
   duesRateOverride         Boolean           @default(false)
   phoneNumber              String?
   emergencyContact         String?
+  emergencyContactName     String?
+  avatarUrl                String?
   isAdmin                  Boolean           @default(false)
   creditBalance            Decimal           @default(0) @db.Decimal(10, 2)
   notifyEmailAnnouncements Boolean           @default(true)

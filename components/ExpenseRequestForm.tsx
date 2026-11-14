@@ -44,7 +44,7 @@ export default function ExpenseRequestForm({ memberships }: { memberships: Membe
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-2xl bg-surface-muted p-4">
       {submitted && (
-        <p className="rounded-lg bg-brand-soft px-3 py-2 text-xs text-brand-strong">
+        <p role="status" className="animate-fadeIn rounded-lg bg-brand-soft px-3 py-2 text-xs text-brand-strong">
           Request submitted — the board will review it.
         </p>
       )}
@@ -119,6 +119,7 @@ export default function ExpenseRequestForm({ memberships }: { memberships: Membe
       <button
         type="submit"
         disabled={loading}
+        aria-busy={loading}
         className="w-full rounded-xl bg-brand py-3 text-sm font-medium text-on-brand disabled:opacity-60"
       >
         {loading ? 'Submitting…' : 'Submit request'}

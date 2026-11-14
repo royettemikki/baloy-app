@@ -8,6 +8,7 @@ type CandidateResult = {
   id: number;
   name: string;
   photoUrl: string | null;
+  homeownerAvatarUrl: string | null;
   slate: { name: string; color: string } | null;
   votes: number;
   share: number;
@@ -311,9 +312,9 @@ export default function ElectionResultsDashboard({
                   >
                     {index + 1}
                   </span>
-                  {candidate.photoUrl ? (
+                  {candidate.photoUrl || candidate.homeownerAvatarUrl ? (
                     <img
-                      src={candidate.photoUrl}
+                      src={candidate.photoUrl ?? candidate.homeownerAvatarUrl ?? ''}
                       alt=""
                       className="h-9 w-9 shrink-0 rounded-lg object-cover"
                     />

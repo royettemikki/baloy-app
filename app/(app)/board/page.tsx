@@ -14,7 +14,27 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function MemberAvatar({ name, featured = false }: { name: string; featured?: boolean }) {
+function MemberAvatar({
+  name,
+  avatarUrl,
+  featured = false,
+}: {
+  name: string;
+  avatarUrl: string | null;
+  featured?: boolean;
+}) {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt=""
+        className={`shrink-0 rounded-full object-cover ${
+          featured ? 'h-14 w-14 border border-white/20' : 'h-11 w-11'
+        }`}
+      />
+    );
+  }
+
   return (
     <div
       className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${
@@ -44,7 +64,7 @@ function BoardMemberCard({
           : 'border-line bg-surface'
       }`}
     >
-      <MemberAvatar name={holder.fullName} featured={featured} />
+      <MemberAvatar name={holder.fullName} avatarUrl={holder.avatarUrl} featured={featured} />
       <div className="min-w-0 flex-1">
         <p
           className={`truncate font-semibold ${featured ? 'text-base text-white' : 'text-sm text-ink'}`}

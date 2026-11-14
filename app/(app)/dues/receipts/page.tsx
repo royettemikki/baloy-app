@@ -4,8 +4,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatFullDate } from '@/lib/formatDate';
-import { IconCheck, IconChevronDown, IconFileText } from '@/components/Icons';
+import { IconCheck, IconFileText } from '@/components/Icons';
 import { getPropertyResidentIds } from '@/lib/propertyAccess';
+import BackLink from '@/components/BackLink';
 
 export default async function DuesReceiptsPage() {
   const session = await getServerSession(authOptions);
@@ -22,13 +23,15 @@ export default async function DuesReceiptsPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/dues" className="mb-4 inline-flex items-center gap-1 text-xs font-semibold text-brand-strong">
-        <IconChevronDown width={14} height={14} className="rotate-90" /> Back to dues
-      </Link>
+      <BackLink href="/dues">Back to dues</BackLink>
       <header className="mb-5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Dues &amp; payments</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">
+          Dues &amp; payments
+        </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">Payment receipts</h1>
-        <p className="mt-1 text-sm text-ink-soft">Open a confirmed payment to view or print its receipt.</p>
+        <p className="mt-1 text-sm text-ink-soft">
+          Open a confirmed payment to view or print its receipt.
+        </p>
       </header>
 
       {receipts.length > 0 ? (
@@ -43,12 +46,18 @@ export default async function DuesReceiptsPage() {
                 <IconFileText width={18} height={18} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-ink">{receipt.allocationSummary ?? 'Payment'}</span>
-                <span className="mt-0.5 block text-[11px] text-ink-muted">{formatFullDate(receipt.confirmedAt ?? receipt.submittedAt)}</span>
+                <span className="block truncate text-sm font-semibold text-ink">
+                  {receipt.allocationSummary ?? 'Payment'}
+                </span>
+                <span className="mt-0.5 block text-[11px] text-ink-muted">
+                  {formatFullDate(receipt.confirmedAt ?? receipt.submittedAt)}
+                </span>
               </span>
               <span className="shrink-0 text-right">
                 <span className="block text-sm font-semibold tabular-nums text-ink">
-                  {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(receipt.amountPaid))}
+                  {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(
+                    Number(receipt.amountPaid),
+                  )}
                 </span>
                 <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-brand-strong">
                   <IconCheck width={11} height={11} /> View receipt
