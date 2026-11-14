@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { getPositionWinnerIds } from '@/lib/electionWinners';
+import { getCurrentOfficeholders, getPositionWinnerIds } from '@/lib/electionWinners';
 import { STANDARD_POSITION_TEMPLATE } from '@/constants/positionTemplates';
 import { isFilingOpen, isVotingOpen, isAwaitingVotingStart, isDraft } from '@/lib/electionWindows';
 import CandidateLinkPicker from '@/components/admin/elections/CandidateLinkPicker';
@@ -20,7 +20,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import { IconBallot, IconCheck, IconUser } from '@/components/Icons';
 
 export default async function AdminElectionsPage() {
-  const [elections, residents] = await Promise.all([
+  const [elections, residents, currentOfficeholders] = await Promise.all([
     prisma.election.findMany({
       orderBy: { opensAt: 'desc' },
       include: { positions: { include: { candidates: { include: { votes: true } } } } },
@@ -29,7 +29,15 @@ export default async function AdminElectionsPage() {
       where: { passwordHash: { not: null } },
       orderBy: { fullName: 'asc' },
     }),
+    getCurrentOfficeholders(),
   ]);
+
+  const currentRolesByHomeowner = new Map<string, { title: string; isHoldover: boolean }[]>();
+  for (const officeholder of currentOfficeholders) {
+    const roles = currentRolesByHomeowner.get(officeholder.homeownerId) ?? [];
+    roles.push({ title: officeholder.positionTitle, isHoldover: officeholder.isHoldover });
+    currentRolesByHomeowner.set(officeholder.homeownerId, roles);
+  }
 
   const serializedResidents = residents.map((r) => ({
     id: r.id,
@@ -186,6 +194,7 @@ export default async function AdminElectionsPage() {
               title={election.title}
               statusLabel={statusLabel}
               positionCount={election.positions.length}
+              termDurationYears={election.termDurationYears}
               candidateCount={election.positions.reduce(
                 (count, position) => count + position.candidates.length,
                 0,
@@ -379,6 +388,11 @@ export default async function AdminElectionsPage() {
                                     filingId={f.id}
                                     homeownerName={f.homeowner.fullName}
                                     statement={f.statement}
+                                    preferredBallotNumber={f.preferredBallotNumber}
+                                    currentRoles={currentRolesByHomeowner.get(f.homeownerId) ?? []}
+                                    usedBallotNumbers={position.candidates.map(
+                                      (candidate) => candidate.ballotNumber,
+                                    )}
                                   />
                                 ))}
                               </div>
@@ -389,6 +403,9 @@ export default async function AdminElectionsPage() {
                             <NewCandidateForm
                               positionId={position.id}
                               residents={serializedResidents}
+                              usedBallotNumbers={position.candidates.map(
+                                (candidate) => candidate.ballotNumber,
+                              )}
                             />
                           )}
                         </PositionRow>

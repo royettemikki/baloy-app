@@ -145,6 +145,7 @@ model Election {
   id                  Int        @id @default(autoincrement())
   title               String
   opensAt             DateTime   @default(now())
+  termDurationYears   Int        @default(2)
   filingDurationHours Float
   votingDurationHours Float
   filingOpensAt       DateTime?
@@ -192,15 +193,13 @@ model Vote {
   position         Position        @relation(fields: [positionId], references: [id])
   propertyId       String
   property         Property        @relation(fields: [propertyId], references: [id])
-  propertyBallotId Int?            @unique
+  propertyBallotId Int?
   propertyBallot   PropertyBallot? @relation(fields: [propertyBallotId], references: [id])
   candidateId      Int
   candidate        Candidate       @relation(fields: [candidateId], references: [id])
   homeownerId      String
   homeowner        Homeowner       @relation(fields: [homeownerId], references: [id])
   castAt           DateTime        @default(now())
-
-  @@unique([positionId, homeownerId])
 }
 
 model PropertyBallot {
@@ -209,7 +208,7 @@ model PropertyBallot {
   position   Position @relation(fields: [positionId], references: [id])
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id])
-  vote       Vote?
+  votes      Vote[]
 
   @@unique([positionId, propertyId])
 }
@@ -267,16 +266,17 @@ enum CandidacyFilingStatus {
 }
 
 model CandidacyFiling {
-  id                   Int                   @id @default(autoincrement())
-  homeownerId          String
-  homeowner            Homeowner             @relation(fields: [homeownerId], references: [id])
-  positionId           Int
-  position             Position              @relation(fields: [positionId], references: [id])
-  statement            String?
-  status               CandidacyFilingStatus @default(Pending)
-  rejectionReason      String?
-  resultingCandidateId Int?                  @unique
-  resultingCandidate   Candidate?            @relation(fields: [resultingCandidateId], references: [id])
-  createdAt            DateTime              @default(now())
-  reviewedAt           DateTime?
+  id                    Int                   @id @default(autoincrement())
+  homeownerId           String
+  homeowner             Homeowner             @relation(fields: [homeownerId], references: [id])
+  positionId            Int
+  position              Position              @relation(fields: [positionId], references: [id])
+  statement             String?
+  preferredBallotNumber Int?
+  status                CandidacyFilingStatus @default(Pending)
+  rejectionReason       String?
+  resultingCandidateId  Int?                  @unique
+  resultingCandidate    Candidate?            @relation(fields: [resultingCandidateId], references: [id])
+  createdAt             DateTime              @default(now())
+  reviewedAt            DateTime?
 }

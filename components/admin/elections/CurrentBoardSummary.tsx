@@ -1,4 +1,5 @@
 import { getCurrentOfficeholders, Officeholder } from '@/lib/electionWinners';
+import { formatFullDate } from '@/lib/formatDate';
 
 function initials(name: string) {
   return name
@@ -7,6 +8,10 @@ function initials(name: string) {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+}
+
+function displayUnit(unit: string) {
+  return /^REPLACE_WITH_/i.test(unit) ? 'Unit not set' : `Unit ${unit}`;
 }
 
 export default async function CurrentBoardSummary() {
@@ -72,20 +77,27 @@ export default async function CurrentBoardSummary() {
               {group.holders.map((holder) => (
                 <div
                   key={`${holder.positionId}-${holder.homeownerId}`}
-                  className="border-line/80 bg-surface-muted/45 flex min-w-0 items-center gap-2.5 rounded-xl border px-2.5 py-2"
+                  className="border-line/80 bg-surface-muted/45 flex min-w-0 items-start gap-2.5 rounded-xl border px-2.5 py-2.5"
                 >
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-[10px] font-semibold text-brand-strong">
                     {initials(holder.fullName)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[10px] font-medium text-ink-muted">
+                    <p className="break-words text-[10px] font-medium leading-snug text-ink-muted">
                       {holder.positionTitle}
                     </p>
-                    <p className="truncate text-xs font-semibold text-ink">{holder.fullName}</p>
+                    <p className="break-words text-xs font-semibold leading-snug text-ink">
+                      {holder.fullName}
+                    </p>
+                    <p className="mt-0.5 break-words text-[9px] text-ink-muted">
+                      {displayUnit(holder.unit)}
+                    </p>
+                    <p className="mt-0.5 break-words text-[9px] text-ink-muted">
+                      {holder.isHoldover
+                        ? `Holdover since ${formatFullDate(holder.termEndsAt)}`
+                        : `Term through ${formatFullDate(holder.termEndsAt)}`}
+                    </p>
                   </div>
-                  <span className="hidden shrink-0 rounded-full bg-surface px-2 py-0.5 text-[9px] text-ink-muted sm:inline">
-                    Unit {holder.unit}
-                  </span>
                 </div>
               ))}
             </div>

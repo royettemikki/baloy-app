@@ -25,7 +25,7 @@ export default function VoteWizard({
     remaining.length === 0 ? 'complete' : 'welcome',
   );
   const [stepIndex, setStepIndex] = useState(0);
-  const [selections, setSelections] = useState<Record<number, number>>({});
+  const [selections, setSelections] = useState<Record<number, number[]>>({});
   const [fromReview, setFromReview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -47,7 +47,17 @@ export default function VoteWizard({
   );
 
   function selectCandidate(positionId: number, candidateId: number) {
-    setSelections((prev) => ({ ...prev, [positionId]: candidateId }));
+    const position = remaining.find((item) => item.id === positionId);
+    if (!position) return;
+    setSelections((previous) => {
+      const current = previous[positionId] ?? [];
+      const next = current.includes(candidateId)
+        ? current.filter((id) => id !== candidateId)
+        : current.length < position.seats
+          ? [...current, candidateId]
+          : current;
+      return { ...previous, [positionId]: next };
+    });
     setViewingCandidateId(null);
   }
 
@@ -55,18 +65,19 @@ export default function VoteWizard({
     const merged = { ...selections };
     remaining.forEach((position) => {
       const match = position.candidates.find((c) => c.slate?.name === slateName);
-      if (match) merged[position.id] = match.id;
+      if (match) merged[position.id] = [match.id];
     });
     setSelections(merged);
     setShowSlatePicker(false);
     setCompareCandidateIds([]);
 
-    const nextIndex = remaining.findIndex((p) => !merged[p.id]);
+    const nextIndex = remaining.findIndex((p) => !merged[p.id]?.length);
     setPhase(nextIndex === -1 ? 'review' : 'voting');
     if (nextIndex !== -1) setStepIndex(nextIndex);
   }
 
   function handleContinue() {
+    if (!(selections[remaining[stepIndex]?.id]?.length > 0)) return;
     if (fromReview) {
       setFromReview(false);
       setPhase('review');
@@ -99,7 +110,12 @@ export default function VoteWizard({
 
   function handleSubmitBallot() {
     setError(null);
-    const payload = remaining.map((p) => ({ positionId: p.id, candidateId: selections[p.id] }));
+    const payload = remaining.flatMap((position) =>
+      (selections[position.id] ?? []).map((candidateId) => ({
+        positionId: position.id,
+        candidateId,
+      })),
+    );
     startTransition(async () => {
       const result = await castBallotAction(payload);
       if (result.error) {
@@ -122,7 +138,12 @@ export default function VoteWizard({
   }
 
   if (phase === 'welcome') {
-    return <ElectionWelcome election={{ ...election, positions: remaining }} onStart={() => setPhase('voting')} />;
+    return (
+      <ElectionWelcome
+        election={{ ...election, positions: remaining }}
+        onStart={() => setPhase('voting')}
+      />
+    );
   }
 
   if (phase === 'review') {
@@ -150,7 +171,7 @@ export default function VoteWizard({
         position={position}
         stepIndex={stepIndex}
         totalSteps={remaining.length}
-        selected={selections[position.id]}
+        selected={selections[position.id] ?? []}
         fromReview={fromReview}
         hasSlates={availableSlates.length > 0}
         onSelect={(candidateId) => selectCandidate(position.id, candidateId)}
@@ -171,6 +192,11 @@ export default function VoteWizard({
       {viewingCandidate && (
         <CandidateSheet
           candidate={viewingCandidate}
+          isSelected={(selections[position.id] ?? []).includes(viewingCandidate.id)}
+          selectionDisabled={
+            (selections[position.id] ?? []).length >= position.seats &&
+            !(selections[position.id] ?? []).includes(viewingCandidate.id)
+          }
           onClose={() => setViewingCandidateId(null)}
           onSelect={() => selectCandidate(position.id, viewingCandidate.id)}
         />
@@ -186,7 +212,9 @@ export default function VoteWizard({
 
       {showCompare && (
         <CandidateCompareSheet
-          candidates={position.candidates.filter((candidate) => compareCandidateIds.includes(candidate.id))}
+          candidates={position.candidates.filter((candidate) =>
+            compareCandidateIds.includes(candidate.id),
+          )}
           onClose={() => setShowCompare(false)}
         />
       )}

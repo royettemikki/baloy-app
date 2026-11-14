@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCurrentOfficeholders, Officeholder } from '@/lib/electionWinners';
 import { IconBallot, IconBarChart, IconCheck, IconUser } from '@/components/Icons';
+import { formatFullDate } from '@/lib/formatDate';
 
 const OFFICER_TITLES = ['President', 'Vice President', 'Treasurer', 'Secretary'];
 
@@ -52,6 +53,11 @@ function BoardMemberCard({
         </p>
         <p className={`mt-0.5 text-xs ${featured ? 'text-white/75' : 'text-ink-muted'}`}>
           Unit {holder.unit}
+        </p>
+        <p className={`mt-1 text-[10px] ${featured ? 'text-white/75' : 'text-ink-muted'}`}>
+          {holder.isHoldover
+            ? `Holdover since ${formatFullDate(holder.termEndsAt)}`
+            : `Term through ${formatFullDate(holder.termEndsAt)}`}
         </p>
       </div>
       <span

@@ -7,6 +7,8 @@ import AutoRefresh from '@/components/AutoRefresh';
 import PositionFilingCard from '@/components/PositionFilingCard';
 import { IconBallot } from '@/components/Icons';
 import { isFilingOpen } from '@/lib/electionWindows';
+import { getCurrentOfficeholders } from '@/lib/electionWinners';
+import { canFileForPosition } from '@/lib/candidacyRules';
 
 export default async function FileCandidacyPage() {
   const session = await getServerSession(authOptions);
@@ -16,7 +18,7 @@ export default async function FileCandidacyPage() {
     redirect('/login');
   }
 
-  const [candidatePositions, myFilings] = await Promise.all([
+  const [candidatePositions, myFilings, allCurrentOfficeholders] = await Promise.all([
     prisma.position.findMany({
       where: { election: { OR: [{ closesAt: null }, { closesAt: { gt: new Date() } }] } },
       include: { election: true },
@@ -26,8 +28,13 @@ export default async function FileCandidacyPage() {
       include: { position: { include: { election: true } } },
       orderBy: { createdAt: 'desc' },
     }),
+    getCurrentOfficeholders(),
   ]);
 
+  const currentRoles = allCurrentOfficeholders.filter(
+    (officeholder) => officeholder.homeownerId === homeownerId,
+  );
+  const currentPositionTitles = currentRoles.map((officeholder) => officeholder.positionTitle);
   const openPositions = candidatePositions.filter((p) => isFilingOpen(p.election));
   const filingByPositionId = new Map(myFilings.map((f) => [f.positionId, f]));
   const pastFilings = myFilings.filter((f) => {
@@ -67,6 +74,11 @@ export default async function FileCandidacyPage() {
                 electionTitle={p.election.title}
                 status={filing?.status ?? null}
                 rejectionReason={filing?.rejectionReason ?? null}
+                filingBlockedReason={
+                  canFileForPosition(currentPositionTitles, p.title)
+                    ? null
+                    : `You currently serve as ${currentPositionTitles.join(', ')}. During your current term, you may only file for the same position.`
+                }
               />
             );
           })}

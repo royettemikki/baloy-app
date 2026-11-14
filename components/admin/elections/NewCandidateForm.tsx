@@ -3,19 +3,24 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createCandidateFromAccountAction } from '@/app/actions/elections';
+import { getNextAvailableBallotNumber } from '@/lib/candidacyRules';
 
 type Resident = { id: string; fullName: string; unit: string };
 
 export default function NewCandidateForm({
   positionId,
   residents,
+  usedBallotNumbers,
 }: {
   positionId: number;
   residents: Resident[];
+  usedBallotNumbers: number[];
 }) {
   const [open, setOpen] = useState(false);
   const [homeownerId, setHomeownerId] = useState('');
-  const [ballotNumber, setBallotNumber] = useState('1');
+  const [ballotNumber, setBallotNumber] = useState(() =>
+    String(getNextAvailableBallotNumber(usedBallotNumbers)),
+  );
   const [isIncumbent, setIsIncumbent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,7 +46,9 @@ export default function NewCandidateForm({
       return;
     }
     setHomeownerId('');
-    setBallotNumber('1');
+    setBallotNumber(
+      String(getNextAvailableBallotNumber([...usedBallotNumbers, parseInt(ballotNumber, 10)])),
+    );
     setIsIncumbent(false);
     setOpen(false);
     router.refresh();
@@ -49,7 +56,10 @@ export default function NewCandidateForm({
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="py-1.5 text-xs font-medium text-brand-strong">
+      <button
+        onClick={() => setOpen(true)}
+        className="py-1.5 text-xs font-medium text-brand-strong"
+      >
         + Add candidate
       </button>
     );
@@ -98,6 +108,9 @@ export default function NewCandidateForm({
           Currently holds this role (incumbent)
         </label>
       </div>
+      <p className="text-[10px] text-ink-muted">
+        Used for this position: {usedBallotNumbers.length ? usedBallotNumbers.join(', ') : 'none'}
+      </p>
       <div className="flex gap-2">
         <button
           type="submit"

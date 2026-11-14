@@ -46,69 +46,96 @@ export async function castBallotAction(selections: { positionId: number; candida
     return { error: "Only the property's primary voter can submit its ballot." };
   }
 
-  const selectedPositionIds = selections.map(({ positionId }) => positionId);
-  if (new Set(selectedPositionIds).size !== selectedPositionIds.length) {
-    return { error: 'Choose one candidate for each position.' };
+  const selectionsByPosition = new Map<number, number[]>();
+  const selectedCandidateIds = new Set<number>();
+  for (const { positionId, candidateId } of selections) {
+    const positionSelections = selectionsByPosition.get(positionId) ?? [];
+    if (positionSelections.includes(candidateId) || selectedCandidateIds.has(candidateId)) {
+      return { error: 'A candidate can only be selected once on your ballot.' };
+    }
+    positionSelections.push(candidateId);
+    selectionsByPosition.set(positionId, positionSelections);
+    selectedCandidateIds.add(candidateId);
   }
 
-  const firstPosition = await prisma.position.findUnique({
-    where: { id: selectedPositionIds[0] },
+  const selectedPositionIds = [...selectionsByPosition.keys()];
+  const positions = await prisma.position.findMany({
+    where: { id: { in: selectedPositionIds } },
     include: { election: true },
   });
-  if (!firstPosition) return { error: 'One of the positions could not be found.' };
+  if (positions.length !== selectedPositionIds.length) {
+    return { error: 'One of the positions could not be found.' };
+  }
+  const firstPosition = positions[0];
+  if (positions.some((position) => position.electionId !== firstPosition.electionId)) {
+    return { error: 'Your selections must belong to one election.' };
+  }
   if (!isVotingOpen(firstPosition.election)) {
     return { error: 'Voting is not currently open for this election.' };
   }
 
   const electionPositions = await prisma.position.findMany({
     where: { electionId: firstPosition.electionId },
-    select: { id: true },
+    select: { id: true, seats: true },
   });
   const previousVotes = await prisma.vote.findMany({
     where: { propertyId: homeowner.propertyId, position: { electionId: firstPosition.electionId } },
     select: { positionId: true },
   });
+  const alreadyVotedPositionIds = new Set(previousVotes.map((vote) => vote.positionId));
   const expectedPositionIds = electionPositions
     .map(({ id }) => id)
-    .filter((id) => !previousVotes.some((vote) => vote.positionId === id))
+    .filter((id) => !alreadyVotedPositionIds.has(id))
     .sort((a, b) => a - b);
 
   if ([...selectedPositionIds].sort((a, b) => a - b).join(',') !== expectedPositionIds.join(',')) {
-    return { error: 'Submit one selection for every position remaining on your ballot.' };
+    return { error: 'Submit at least one selection for every position remaining on your ballot.' };
   }
 
-  for (const { positionId, candidateId } of selections) {
-    const position = await prisma.position.findUnique({
-      where: { id: positionId },
-      include: { election: true },
-    });
-    if (!position || position.electionId !== firstPosition.electionId) {
-      return { error: 'One of the positions could not be found.' };
+  const positionById = new Map(electionPositions.map((position) => [position.id, position]));
+  for (const [positionId, candidateIds] of selectionsByPosition) {
+    const position = positionById.get(positionId);
+    if (!position) return { error: 'One of the positions could not be found.' };
+    if (candidateIds.length > position.seats) {
+      return {
+        error: `Select no more than ${position.seats} candidate${position.seats === 1 ? '' : 's'} for this position.`,
+      };
     }
+  }
 
-    const candidate = await prisma.candidate.findFirst({ where: { id: candidateId, positionId } });
-    if (!candidate) return { error: 'One of your selections is invalid.' };
-
-    const existing = await prisma.vote.findFirst({
-      where: { positionId, propertyId: homeowner.propertyId },
-    });
-    if (existing) return { error: 'You have already voted for one of these positions.' };
+  const candidates = await prisma.candidate.findMany({
+    where: {
+      id: { in: [...selectedCandidateIds] },
+      positionId: { in: selectedPositionIds },
+    },
+    select: { id: true, positionId: true },
+  });
+  const candidatePositionById = new Map(
+    candidates.map((candidate) => [candidate.id, candidate.positionId]),
+  );
+  if (
+    candidates.length !== selectedCandidateIds.size ||
+    selections.some(
+      ({ positionId, candidateId }) => candidatePositionById.get(candidateId) !== positionId,
+    )
+  ) {
+    return { error: 'One of your selections is invalid.' };
   }
 
   try {
     await prisma.$transaction(async (tx) => {
-      for (const { positionId, candidateId } of selections) {
+      for (const [positionId, candidateIds] of selectionsByPosition) {
         const propertyBallot = await tx.propertyBallot.create({
           data: { positionId, propertyId: homeowner.propertyId },
         });
-        await tx.vote.create({
-          data: {
+        await tx.vote.createMany({
+          data: candidateIds.map((candidateId) => ({
             positionId,
             candidateId,
             homeownerId,
             propertyId: homeowner.propertyId,
             propertyBallotId: propertyBallot.id,
-          },
+          })),
         });
       }
     });
@@ -143,6 +170,7 @@ export async function createElectionAction(
   title: string,
   filingDurationHours: number,
   votingDurationHours: number,
+  termDurationYears: number,
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
@@ -151,9 +179,11 @@ export async function createElectionAction(
     return { error: 'Filing period must be greater than 0 hours.' };
   if (!votingDurationHours || votingDurationHours <= 0)
     return { error: 'Voting period must be greater than 0 hours.' };
+  if (!Number.isSafeInteger(termDurationYears) || termDurationYears < 1 || termDurationYears > 20)
+    return { error: 'Board term must be a whole number of years between 1 and 20.' };
 
   const election = await prisma.election.create({
-    data: { title, filingDurationHours, votingDurationHours },
+    data: { title: title.trim(), filingDurationHours, votingDurationHours, termDurationYears },
   });
   revalidatePath('/admin/elections');
   return { success: true, electionId: election.id };
@@ -163,7 +193,9 @@ export async function createPositionAction(electionId: number, title: string, se
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
   if (!title.trim()) return { error: 'Position title is required.' };
-  if (!seats || seats < 1) return { error: 'Seats must be at least 1.' };
+  if (!Number.isSafeInteger(seats) || seats < 1 || seats > 100) {
+    return { error: 'Enter a whole number of seats between 1 and 100.' };
+  }
   const lockError = await getBallotStructureLockError(electionId);
   if (lockError) return { error: lockError };
 
@@ -180,6 +212,9 @@ export async function createCandidateFromAccountAction(
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!Number.isSafeInteger(ballotNumber) || ballotNumber < 1) {
+    return { error: 'Ballot number must be a positive whole number.' };
+  }
 
   const position = await prisma.position.findUnique({
     where: { id: positionId },
@@ -191,6 +226,14 @@ export async function createCandidateFromAccountAction(
 
   const homeowner = await prisma.homeowner.findUnique({ where: { id: homeownerId } });
   if (!homeowner) return { error: 'Resident not found.' };
+
+  const existingCandidate = await prisma.candidate.findFirst({
+    where: { positionId, ballotNumber },
+    select: { id: true },
+  });
+  if (existingCandidate) {
+    return { error: 'That ballot number is already assigned to a candidate for this position.' };
+  }
 
   await prisma.candidate.create({
     data: {
@@ -211,7 +254,9 @@ export async function updatePositionAction(positionId: number, title: string, se
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
   if (!title.trim()) return { error: 'Position title is required.' };
-  if (!seats || seats < 1) return { error: 'Seats must be at least 1.' };
+  if (!Number.isSafeInteger(seats) || seats < 1 || seats > 100) {
+    return { error: 'Enter a whole number of seats between 1 and 100.' };
+  }
 
   const position = await prisma.position.findUnique({
     where: { id: positionId },

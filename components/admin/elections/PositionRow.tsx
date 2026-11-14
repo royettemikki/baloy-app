@@ -76,13 +76,17 @@ export default function PositionRow({
             className="rounded-lg bg-surface px-3 py-2 text-sm"
             aria-label="Position title"
           />
+          <label htmlFor={`position-seats-${positionId}`} className="text-[11px] text-ink-soft">
+            Seats and maximum candidates each voter may select
+          </label>
           <input
+            id={`position-seats-${positionId}`}
             type="number"
             min={1}
             value={newSeats}
             onChange={(event) => setNewSeats(event.target.value)}
             className="w-24 rounded-lg bg-surface px-3 py-2 text-sm"
-            aria-label="Number of seats"
+            aria-label="Number of seats and candidates voters may select"
           />
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex gap-2">
@@ -102,8 +106,8 @@ export default function PositionRow({
           </div>
         </div>
       ) : (
-        <div className="from-brand-soft/70 to-surface-muted/60 mb-3 flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r px-3 py-2.5">
-          <div className="flex min-w-0 items-center gap-2.5">
+        <div className="from-brand-soft/70 to-surface-muted/60 mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl bg-gradient-to-r px-3 py-2.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-2">
             <span
               className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold ${
                 finalized ? 'bg-brand text-on-brand' : 'bg-brand-soft text-brand-strong'
@@ -115,18 +119,18 @@ export default function PositionRow({
               <p className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
                 Position
               </p>
-              <p className="truncate text-sm font-semibold text-ink">{title}</p>
+              <p className="break-words text-sm font-semibold text-ink">{title}</p>
             </div>
             <span className="border-line/70 bg-surface/80 shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-medium text-ink-soft">
-              {seats} seat{seats === 1 ? '' : 's'}
+              {seats} seat{seats === 1 ? '' : 's'} · up to {seats} picks
             </span>
           </div>
           {locked ? (
-            <span className="bg-surface/70 shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-ink-muted">
+            <span className="bg-surface/70 ml-auto shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-ink-muted">
               {lockLabel}
             </span>
           ) : (
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               <button
                 onClick={() => setEditing(true)}
                 className="bg-surface/70 rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-soft"

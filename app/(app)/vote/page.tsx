@@ -36,7 +36,7 @@ export default async function VotePage() {
     <div className="mb-4 flex flex-wrap items-center gap-2">
       <Link
         href="/board"
-        className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-ink-soft shadow-sm transition-colors hover:border-brand/30 hover:text-brand-strong"
+        className="hover:border-brand/30 inline-flex min-h-9 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-ink-soft shadow-sm transition-colors hover:text-brand-strong"
       >
         <IconHome width={15} height={15} />
         Your board
@@ -44,7 +44,7 @@ export default async function VotePage() {
       {(publishedResultsCount > 0 || votable) && (
         <Link
           href="/results"
-          className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-ink-soft shadow-sm transition-colors hover:border-brand/30 hover:text-brand-strong"
+          className="hover:border-brand/30 inline-flex min-h-9 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-ink-soft shadow-sm transition-colors hover:text-brand-strong"
         >
           <IconBarChart width={15} height={15} />
           Election results
@@ -102,10 +102,13 @@ export default async function VotePage() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-soft">
             <IconBallot width={21} height={21} className="text-purple" />
           </div>
-          <h1 className="text-lg font-semibold text-ink">Voting access is assigned to your property&apos;s primary voter</h1>
+          <h1 className="text-lg font-semibold text-ink">
+            Voting access is assigned to your property&apos;s primary voter
+          </h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-            An administrator must designate the resident authorized to vote for {homeowner?.property.unit ?? 'your property'}.
-            Contact your community administrator if this should be you.
+            An administrator must designate the resident authorized to vote for{' '}
+            {homeowner?.property.unit ?? 'your property'}. Contact your community administrator if
+            this should be you.
           </p>
         </div>
       </div>
@@ -117,11 +120,11 @@ export default async function VotePage() {
     include: { position: true, candidate: true },
     orderBy: [{ castAt: 'asc' }, { id: 'asc' }],
   });
-  const votesByPosition = new Map(myVotes.map((vote) => [vote.positionId, vote]));
-  const propertyVotes = [...votesByPosition.values()];
+  const propertyVotes = myVotes;
+  const votedPositionIds = [...new Set(propertyVotes.map((vote) => vote.positionId))];
 
   const allVoted =
-    votable.positions.length > 0 && propertyVotes.length >= votable.positions.length;
+    votable.positions.length > 0 && votedPositionIds.length >= votable.positions.length;
 
   if (allVoted) {
     return (
@@ -142,7 +145,7 @@ export default async function VotePage() {
       <div className="min-h-0 flex-1">
         <VoteWizard
           election={{ ...votable, closesAt: closesAt.toISOString() }}
-          votedPositionIds={propertyVotes.map((vote) => vote.positionId)}
+          votedPositionIds={votedPositionIds}
         />
       </div>
     </div>

@@ -1,0 +1,2 @@
+ALTER TABLE "Election"
+ADD COLUMN "termDurationYears" INTEGER NOT NULL DEFAULT 2;

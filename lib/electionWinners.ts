@@ -23,18 +23,18 @@ export type Officeholder = {
   electionId: number;
   electionTitle: string;
   electionYear: number;
+  termEndsAt: Date;
+  isHoldover: boolean;
 };
 
-// The single source of truth for "who currently holds each role" — considers
-// every closed election, but only the most recently closed one counts per
-// position title. An older election's winner for the same title is retired
-// automatically once a newer election for that same title closes.
+// The most recent election with a winner decides each position. If a later
+// election has no winner, the previous officeholder remains as a holdover.
 export async function getCurrentOfficeholders(): Promise<Officeholder[]> {
   const now = new Date();
 
   const closedElections = await prisma.election.findMany({
     where: { closesAt: { lt: now } },
-    orderBy: { closesAt: 'desc' },
+    orderBy: [{ closesAt: 'desc' }, { id: 'desc' }],
     include: {
       positions: { include: { candidates: { include: { votes: true, homeowner: true } } } },
     },
@@ -47,13 +47,20 @@ export async function getCurrentOfficeholders(): Promise<Officeholder[]> {
     if (!election.closesAt) continue; // shouldn't happen given the query filter above, but keeps this fully type-safe
     for (const position of election.positions) {
       if (seenTitles.has(position.title)) continue; // a more recent election already decided this title
-      seenTitles.add(position.title);
 
       const winnerIds = [...position.candidates]
         .filter((candidate) => candidate.votes.length > 0)
         .sort((a, b) => b.votes.length - a.votes.length || a.id - b.id)
         .slice(0, position.seats)
         .map((c) => c.id);
+
+      if (winnerIds.length === 0) continue;
+
+      seenTitles.add(position.title);
+      const termEndsAt = new Date(election.closesAt);
+      const originalMonth = termEndsAt.getMonth();
+      termEndsAt.setFullYear(termEndsAt.getFullYear() + election.termDurationYears);
+      if (termEndsAt.getMonth() !== originalMonth) termEndsAt.setDate(0);
 
       for (const candidate of position.candidates) {
         if (winnerIds.includes(candidate.id) && candidate.homeownerId && candidate.homeowner) {
@@ -66,6 +73,8 @@ export async function getCurrentOfficeholders(): Promise<Officeholder[]> {
             electionId: election.id,
             electionTitle: election.title,
             electionYear: election.closesAt.getFullYear(),
+            termEndsAt,
+            isHoldover: termEndsAt < now,
           });
         }
       }

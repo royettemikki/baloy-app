@@ -6,18 +6,30 @@ import {
   approveCandidacyFilingAction,
   rejectCandidacyFilingAction,
 } from '@/app/actions/candidacyFilings';
+import { getNextAvailableBallotNumber } from '@/lib/candidacyRules';
 
 export default function CandidacyFilingRow({
   filingId,
   homeownerName,
   statement,
+  preferredBallotNumber,
+  currentRoles,
+  usedBallotNumbers,
 }: {
   filingId: number;
   homeownerName: string;
   statement: string | null;
+  preferredBallotNumber: number | null;
+  currentRoles: { title: string; isHoldover: boolean }[];
+  usedBallotNumbers: number[];
 }) {
   const [mode, setMode] = useState<'idle' | 'approving' | 'rejecting'>('idle');
-  const [ballotNumber, setBallotNumber] = useState('1');
+  const [ballotNumber, setBallotNumber] = useState(() => {
+    if (preferredBallotNumber && !usedBallotNumbers.includes(preferredBallotNumber)) {
+      return String(preferredBallotNumber);
+    }
+    return String(getNextAvailableBallotNumber(usedBallotNumbers));
+  });
   const [isIncumbent, setIsIncumbent] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +66,28 @@ export default function CandidacyFilingRow({
 
   return (
     <div className="rounded-xl bg-surface-muted p-3">
-      <p className="text-sm font-medium">{homeownerName}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-medium">{homeownerName}</p>
+        {currentRoles.length > 0 && (
+          <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand-strong">
+            Current board member
+          </span>
+        )}
+      </div>
+      {currentRoles.length > 0 && (
+        <p className="mt-1 text-[10px] text-ink-muted">
+          Currently {currentRoles.map((role) => role.title).join(', ')}
+          {currentRoles.some((role) => role.isHoldover) ? ' · includes holdover role' : ''}
+        </p>
+      )}
+      {preferredBallotNumber !== null && (
+        <p className="mt-1 text-[10px] text-ink-soft">
+          Requested ballot number: <span className="font-semibold">{preferredBallotNumber}</span>
+          {usedBallotNumbers.includes(preferredBallotNumber) && (
+            <span className="text-warning"> · already assigned; choose another number</span>
+          )}
+        </p>
+      )}
       {statement && <p className="mt-1 text-xs text-ink-soft">{statement}</p>}
       {error && <p className="mt-2 text-xs text-danger">{error}</p>}
 
@@ -70,6 +103,10 @@ export default function CandidacyFilingRow({
               className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs"
             />
           </div>
+          <p className="basis-full text-[10px] text-ink-muted">
+            Used for this position:{' '}
+            {usedBallotNumbers.length ? usedBallotNumbers.join(', ') : 'none'}
+          </p>
           <label className="flex items-center gap-1.5 pb-1.5 text-xs text-ink-soft">
             <input
               type="checkbox"
@@ -97,7 +134,7 @@ export default function CandidacyFilingRow({
             onChange={(e) => setReason(e.target.value)}
             placeholder="Why is this being rejected?"
             rows={2}
-            className="w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-xs"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink"
           />
           <div className="flex gap-2">
             <button

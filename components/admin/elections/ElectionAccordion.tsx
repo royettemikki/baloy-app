@@ -8,6 +8,7 @@ export default function ElectionAccordion({
   statusLabel,
   positionCount,
   candidateCount,
+  termDurationYears,
   isClosed,
   isVotingOpen,
   defaultOpen,
@@ -17,6 +18,7 @@ export default function ElectionAccordion({
   statusLabel: string;
   positionCount: number;
   candidateCount: number;
+  termDurationYears: number;
   isClosed: boolean;
   isVotingOpen: boolean;
   defaultOpen: boolean;
@@ -84,6 +86,7 @@ export default function ElectionAccordion({
               <span>
                 {candidateCount} candidate{candidateCount === 1 ? '' : 's'}
               </span>
+              <span>{termDurationYears}-year board term</span>
               {isVotingOpen && <span className="font-medium">Ballot locked</span>}
             </span>
           </span>

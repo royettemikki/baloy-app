@@ -26,15 +26,18 @@ export default function PositionFilingCard({
   electionTitle,
   status,
   rejectionReason,
+  filingBlockedReason,
 }: {
   positionId: number;
   positionTitle: string;
   electionTitle: string;
   status: Status;
   rejectionReason: string | null;
+  filingBlockedReason: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [statement, setStatement] = useState('');
+  const [preferredBallotNumber, setPreferredBallotNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -43,8 +46,10 @@ export default function PositionFilingCard({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const parsedPreferredNumber =
+      preferredBallotNumber.trim() === '' ? null : Number(preferredBallotNumber);
     startTransition(async () => {
-      const result = await fileCandidacyAction(positionId, statement);
+      const result = await fileCandidacyAction(positionId, statement, parsedPreferredNumber);
       if (result.error) {
         setError(result.error);
         return;
@@ -73,12 +78,38 @@ export default function PositionFilingCard({
               <StatusBadge label="Not approved" tone="danger" />
               {rejectionReason && <p className="mt-1.5 text-xs text-danger">{rejectionReason}</p>}
             </div>
+          ) : filingBlockedReason ? (
+            <p className="rounded-lg bg-warning-soft px-3 py-2 text-[11px] leading-relaxed text-warning">
+              {filingBlockedReason}
+            </p>
           ) : !expanded ? (
             <button onClick={() => setExpanded(true)} className="text-xs font-medium text-brand">
               File to run →
             </button>
           ) : (
             <form onSubmit={handleSubmit} className="mt-1 flex flex-col gap-2">
+              <div>
+                <label
+                  htmlFor={`preferred-ballot-number-${positionId}`}
+                  className="mb-1 block text-[11px] font-medium text-ink-soft"
+                >
+                  Preferred ballot number (optional)
+                </label>
+                <input
+                  id={`preferred-ballot-number-${positionId}`}
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  value={preferredBallotNumber}
+                  onChange={(event) => setPreferredBallotNumber(event.target.value)}
+                  placeholder="No preference"
+                  className="w-32 rounded-lg border border-line bg-surface px-3 py-2 text-xs"
+                />
+                <p className="mt-1 text-[10px] text-ink-muted">
+                  This is a request only. The board assigns the final number.
+                </p>
+              </div>
               <textarea
                 value={statement}
                 onChange={(e) => setStatement(e.target.value)}

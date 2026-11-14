@@ -5,13 +5,24 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getAdminOrNull } from '@/lib/adminAuth';
-import { isSingleCandidacyRestrictionEnabled } from '@/lib/candidacyRules';
+import { canFileForPosition, isSingleCandidacyRestrictionEnabled } from '@/lib/candidacyRules';
+import { getCurrentOfficeholders } from '@/lib/electionWinners';
 import { isFilingOpen, isVotingOpen } from '@/lib/electionWindows';
 
-export async function fileCandidacyAction(positionId: number, statement: string) {
+export async function fileCandidacyAction(
+  positionId: number,
+  statement: string,
+  preferredBallotNumber: number | null,
+) {
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id;
   if (!homeownerId) return { error: 'You must be signed in.' };
+  if (
+    preferredBallotNumber !== null &&
+    (!Number.isSafeInteger(preferredBallotNumber) || preferredBallotNumber < 1)
+  ) {
+    return { error: 'Preferred ballot number must be a positive whole number.' };
+  }
 
   const position = await prisma.position.findUnique({
     where: { id: positionId },
@@ -20,6 +31,16 @@ export async function fileCandidacyAction(positionId: number, statement: string)
   if (!position) return { error: 'Position not found.' };
   if (!isFilingOpen(position.election))
     return { error: 'Candidate filing is closed for this election.' };
+
+  const currentRoles = (await getCurrentOfficeholders()).filter(
+    (officeholder) => officeholder.homeownerId === homeownerId,
+  );
+  const currentPositionTitles = currentRoles.map((officeholder) => officeholder.positionTitle);
+  if (!canFileForPosition(currentPositionTitles, position.title)) {
+    return {
+      error: `You currently serve as ${currentPositionTitles.join(', ')}. During your current term, you may only file for the same position.`,
+    };
+  }
 
   const existingForThisPosition = await prisma.candidacyFiling.findFirst({
     where: { positionId, homeownerId, status: { in: ['Pending', 'Approved'] } },
@@ -40,7 +61,12 @@ export async function fileCandidacyAction(positionId: number, statement: string)
   }
 
   await prisma.candidacyFiling.create({
-    data: { homeownerId, positionId, statement: statement || null },
+    data: {
+      homeownerId,
+      positionId,
+      statement: statement || null,
+      preferredBallotNumber,
+    },
   });
 
   revalidatePath('/file-candidacy');
@@ -54,6 +80,9 @@ export async function approveCandidacyFilingAction(
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!Number.isSafeInteger(ballotNumber) || ballotNumber < 1) {
+    return { error: 'Ballot number must be a positive whole number.' };
+  }
 
   const filing = await prisma.candidacyFiling.findUnique({
     where: { id: filingId },
@@ -63,6 +92,16 @@ export async function approveCandidacyFilingAction(
   if (filing.status !== 'Pending') return { error: 'This filing has already been reviewed.' };
 
   const election = filing.position.election;
+
+  const currentRoles = (await getCurrentOfficeholders()).filter(
+    (officeholder) => officeholder.homeownerId === filing.homeownerId,
+  );
+  const currentPositionTitles = currentRoles.map((officeholder) => officeholder.positionTitle);
+  if (!canFileForPosition(currentPositionTitles, filing.position.title)) {
+    return {
+      error: `This resident currently serves as ${currentPositionTitles.join(', ')} and may only file for the same position during their current term.`,
+    };
+  }
 
   if (isVotingOpen(election)) {
     return {
@@ -84,11 +123,17 @@ export async function approveCandidacyFilingAction(
   }
 
   const approved = await prisma.$transaction(async (tx) => {
+    const existingCandidate = await tx.candidate.findFirst({
+      where: { positionId: filing.positionId, ballotNumber },
+      select: { id: true },
+    });
+    if (existingCandidate) return 'duplicate';
+
     const claim = await tx.candidacyFiling.updateMany({
       where: { id: filingId, status: 'Pending' },
       data: { status: 'Approved', reviewedAt: new Date() },
     });
-    if (claim.count !== 1) return false;
+    if (claim.count !== 1) return 'reviewed';
 
     const candidate = await tx.candidate.create({
       data: {
@@ -106,9 +151,12 @@ export async function approveCandidacyFilingAction(
       where: { id: filingId },
       data: { resultingCandidateId: candidate.id },
     });
-    return true;
+    return 'approved';
   });
-  if (!approved) return { error: 'This filing has already been reviewed.' };
+  if (approved === 'duplicate') {
+    return { error: 'That ballot number is already assigned to a candidate for this position.' };
+  }
+  if (approved === 'reviewed') return { error: 'This filing has already been reviewed.' };
 
   revalidatePath('/admin/elections');
   return { success: true };

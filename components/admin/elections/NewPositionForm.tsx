@@ -51,7 +51,9 @@ export default function NewPositionForm({ electionId }: { electionId: number }) 
         />
       </div>
       <div>
-        <label className="mb-1.5 block text-[11px] text-ink-soft">Number of seats</label>
+        <label className="mb-1.5 block text-[11px] text-ink-soft">
+          Seats / candidates each voter may select
+        </label>
         <input
           type="number"
           min={1}
@@ -60,7 +62,7 @@ export default function NewPositionForm({ electionId }: { electionId: number }) 
           className="w-24 rounded-lg border border-line bg-surface px-3 py-2 text-sm"
         />
         <p className="mt-1 text-[11px] text-ink-muted">
-          Most officer roles (President, Treasurer) are 1. Committees can have several.
+          Voters may select up to this many candidates; the top vote-getters fill these seats.
         </p>
       </div>
       <div className="flex gap-2">
