@@ -24,7 +24,7 @@ export default function BottomNav({ enabledFeatures }: { enabledFeatures: Featur
         className="resident-bottom-nav border-line/80 bg-surface/90 pointer-events-auto flex w-full max-w-[620px] items-center justify-around rounded-[24px] border px-2 py-2 shadow-[0_12px_36px_rgba(15,35,28,0.16)] backdrop-blur-2xl sm:px-3"
       >
         {visibleTabs.map(({ href, label, Icon }) => {
-          const active = pathname === href;
+          const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}

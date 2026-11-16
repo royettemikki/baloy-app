@@ -94,7 +94,7 @@ export async function updateFeatureVisibilityAction(
     update: audience === 'admin' ? { adminEnabled: enabled } : { residentEnabled: enabled },
   });
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
   return { success: true };
 }
 

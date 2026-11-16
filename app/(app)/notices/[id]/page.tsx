@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -29,9 +28,6 @@ export default async function AnnouncementDetailPage({ params }: { params: { id:
 
   return (
     <div className="animate-fadeInUp">
-      <Link href="/notices" className="mb-4 inline-block text-sm font-medium text-brand">
-        ← Notices
-      </Link>
       <NoticeDetailContent
         announcement={{
           title: announcement.title,

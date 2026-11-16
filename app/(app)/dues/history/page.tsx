@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatFullDate } from '@/lib/formatDate';
-import BackLink from '@/components/BackLink';
 import { getPropertyResidentIds } from '@/lib/propertyAccess';
 
 const currency = (amount: number) =>
@@ -25,7 +24,6 @@ export default async function DuesHistoryPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <BackLink href="/dues">Back to dues</BackLink>
       <header className="mb-5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">
           Dues &amp; payments

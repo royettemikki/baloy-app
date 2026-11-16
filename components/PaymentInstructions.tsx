@@ -4,7 +4,6 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { claimPaymentAction } from '@/app/actions/dues';
 import { organization } from '@/data/mock';
-import BackLink from '@/components/BackLink';
 
 type Method = 'gcash' | 'bank';
 
@@ -62,7 +61,6 @@ export default function PaymentInstructions({ remainingAmount }: { remainingAmou
 
   return (
     <div>
-      <BackLink href="/dues">Back to dues</BackLink>
       <p className="mb-0.5 text-xs text-ink-muted">Pay your balance</p>
       <h1 className="mb-1 text-xl font-medium">{organization.name} dues</h1>
       <p className="mb-5 text-2xl font-medium text-brand">₱{remainingAmount.toFixed(2)} total</p>
@@ -81,11 +79,7 @@ export default function PaymentInstructions({ remainingAmount }: { remainingAmou
         {method === 'gcash' && (
           <div className="animate-fadeInUp px-4 pb-4">
             <div className="mb-3 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-surface-muted">
-              <img
-                src="/gcash-qr.png"
-                alt="GCash QR code"
-                className="h-full w-full object-contain"
-              />
+              <img src="/qrcode.png" alt="GCash QR code" className="h-1/2 w-1/2 object-contain" />
             </div>
             <a
               href="/gcash-qr.png"

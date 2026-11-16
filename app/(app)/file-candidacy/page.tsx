@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -45,9 +44,6 @@ export default async function FileCandidacyPage() {
   return (
     <div>
       <AutoRefresh />
-      <Link href="/home" className="mb-4 inline-block text-sm font-medium text-brand">
-        ← Home
-      </Link>
 
       <div className="mb-1 flex items-center gap-2.5">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-soft">

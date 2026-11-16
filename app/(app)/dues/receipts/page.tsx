@@ -6,7 +6,6 @@ import { prisma } from '@/lib/prisma';
 import { formatFullDate } from '@/lib/formatDate';
 import { IconCheck, IconFileText } from '@/components/Icons';
 import { getPropertyResidentIds } from '@/lib/propertyAccess';
-import BackLink from '@/components/BackLink';
 
 export default async function DuesReceiptsPage() {
   const session = await getServerSession(authOptions);
@@ -23,7 +22,6 @@ export default async function DuesReceiptsPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <BackLink href="/dues">Back to dues</BackLink>
       <header className="mb-5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">
           Dues &amp; payments
