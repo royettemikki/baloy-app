@@ -15,9 +15,13 @@ import CandidateCompareSheet from './CandidateCompareSheet';
 export default function VoteWizard({
   election,
   votedPositionIds,
+  voterId,
+  onChooseProxy,
 }: {
   election: Election;
   votedPositionIds: number[];
+  voterId: number;
+  onChooseProxy?: () => void;
 }) {
   const remaining = election.positions.filter((p) => !votedPositionIds.includes(p.id));
 
@@ -117,7 +121,7 @@ export default function VoteWizard({
       })),
     );
     startTransition(async () => {
-      const result = await castBallotAction(payload);
+      const result = await castBallotAction(voterId, payload);
       if (result.error) {
         if (result.error.includes('not currently open')) {
           router.push('/vote');
@@ -142,6 +146,7 @@ export default function VoteWizard({
       <ElectionWelcome
         election={{ ...election, positions: remaining }}
         onStart={() => setPhase('voting')}
+        onChooseProxy={onChooseProxy}
       />
     );
   }

@@ -10,24 +10,29 @@ export default async function InvitesPage() {
   const session = await getServerSession(authOptions);
   const currentAdminId = (session?.user as any)?.id as string;
 
-  const [homeowners, duesSettings] = await Promise.all([
+  const [homeowners, duesSettings, allProperties] = await Promise.all([
     prisma.homeowner.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { property: true },
+      include: {
+        property: true,
+        propertyMemberships: { select: { propertyId: true } },
+        primaryForProperty: { select: { id: true } },
+      },
     }),
     prisma.duesSettings.findUnique({ where: { id: 1 } }),
+    prisma.property.findMany({ orderBy: { unit: 'asc' } }),
   ]);
   const communityMode = duesSettings?.monthlyDuesMode ?? 'Fixed';
   const communityRate = Number(duesSettings?.monthlyDuesRate ?? 0);
-  const properties = [
-    ...new Map(homeowners.map((homeowner) => [homeowner.propertyId, homeowner.property])).values(),
-  ];
+  const properties = allProperties;
 
   const serialized = homeowners.map((h) => ({
     id: h.id,
     propertyId: h.propertyId,
     propertyNeedsReview: h.property.needsReview,
-    isPrimaryVoter: h.property.primaryVoterId === h.id,
+    isPrimaryOwner: h.primaryForProperty.length > 0,
+    propertyMembershipIds: h.propertyMemberships.map((membership) => membership.propertyId),
+    primaryPropertyIds: h.primaryForProperty.map((property) => property.id),
     fullName: h.fullName,
     email: h.email,
     unit: h.unit,
@@ -38,7 +43,9 @@ export default async function InvitesPage() {
     isAdmin: h.isAdmin,
     lotAreaSqm: h.property.lotAreaSqm === null ? null : Number(h.property.lotAreaSqm),
     monthlyDuesMode: h.property.duesRateOverride ? h.property.monthlyDuesMode : communityMode,
-    monthlyDuesRate: h.property.duesRateOverride ? Number(h.property.monthlyDuesRate) : communityRate,
+    monthlyDuesRate: h.property.duesRateOverride
+      ? Number(h.property.monthlyDuesRate)
+      : communityRate,
     duesRateOverride: h.property.duesRateOverride,
   }));
 
@@ -46,8 +53,12 @@ export default async function InvitesPage() {
     <div className="space-y-5">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-strong">Community directory</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink md:text-3xl">Residents</h1>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-strong">
+            Community directory
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink md:text-3xl">
+            Residents
+          </h1>
           <p className="mt-1 text-sm text-ink-soft">
             Manage resident accounts, invitations, access, and monthly dues rates.
           </p>
@@ -61,15 +72,23 @@ export default async function InvitesPage() {
         mode={communityMode}
         rate={communityRate}
         overrideCount={properties.filter((property) => property.duesRateOverride).length}
-        missingAreaCount={properties.filter((property) => {
-          const mode = property.duesRateOverride ? property.monthlyDuesMode : communityMode;
-          return mode === 'PerArea' && !property.lotAreaSqm;
-        }).length}
+        missingAreaCount={
+          properties.filter((property) => {
+            const mode = property.duesRateOverride ? property.monthlyDuesMode : communityMode;
+            return mode === 'PerArea' && !property.lotAreaSqm;
+          }).length
+        }
       />
       <p className="-mt-2 text-xs text-ink-muted">
-        Dues settings are shared by everyone linked to a property. Set a property&apos;s primary voter from its resident actions. Monthly assessments are created on the first of each month.
+        Dues settings are shared by everyone linked to a property. Link an owner to each applicable
+        property and set its primary owner from the resident actions. Monthly assessments are
+        created on the first of each month.
       </p>
-      <ResidentsTable homeowners={serialized} currentAdminId={currentAdminId} />
+      <ResidentsTable
+        homeowners={serialized}
+        currentAdminId={currentAdminId}
+        propertyOptions={properties.map(({ id, unit }) => ({ id, unit }))}
+      />
     </div>
   );
 }

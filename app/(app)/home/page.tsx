@@ -9,6 +9,7 @@ import { ANNOUNCEMENT_TAGS } from '@/constants/announcementTags';
 import { formatShortDate, formatMonthName } from '@/lib/formatDate';
 import { getCommitteeMemberships, hasApprovalAuthority } from '@/lib/electionWinners';
 import { ensureCurrentMonthDues } from '@/lib/monthlyDues';
+import { getFeatureVisibilityState } from '@/lib/featureVisibility';
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
@@ -22,13 +23,18 @@ export default async function HomePage() {
       property: {
         select: {
           unit: true,
-          primaryVoterId: true,
           homeowners: { select: { id: true } },
         },
       },
     },
   });
   if (!account) redirect('/login');
+  const featureVisibility = await getFeatureVisibilityState();
+  const showAnnouncements = featureVisibility.announcements.resident;
+  const showElections = featureVisibility.elections.resident;
+  const showPayments = featureVisibility.payments.resident;
+  const showBoard = featureVisibility.board.resident;
+  const showExpenses = featureVisibility.expenses.resident;
   const fullName = account.fullName;
   const firstName = fullName.split(' ')[0];
   const initials = fullName
@@ -37,7 +43,7 @@ export default async function HomePage() {
     .slice(0, 2)
     .join('')
     .toUpperCase();
-  await ensureCurrentMonthDues();
+  if (showPayments) await ensureCurrentMonthDues();
   const residentIds = account.property.homeowners.map((resident) => resident.id);
   const unit = account.property.unit;
   const now = new Date();
@@ -70,7 +76,7 @@ export default async function HomePage() {
         take: 4,
       }),
       prisma.vote.findMany({
-        where: { propertyId: account.propertyId },
+        where: { homeownerId },
         include: { position: true, candidate: true },
         orderBy: { castAt: 'desc' },
         take: 4,
@@ -89,16 +95,17 @@ export default async function HomePage() {
       })
     : 0;
 
-  let alreadyVoted = true;
+  let hasPendingBallot = false;
   if (openElection) {
-    const [positionCount, propertyVotes] = await Promise.all([
-      prisma.position.count({ where: { electionId: openElection.id } }),
-      prisma.vote.findMany({
-        where: { propertyId: account.propertyId, position: { electionId: openElection.id } },
-        select: { positionId: true },
-      }),
-    ]);
-    alreadyVoted = new Set(propertyVotes.map((vote) => vote.positionId)).size >= positionCount;
+    const pendingEntitlement = await prisma.electionVoter.findFirst({
+      where: {
+        electionId: openElection.id,
+        castAt: null,
+        OR: [{ homeownerId }, { proxyId: homeownerId }],
+      },
+      select: { id: true },
+    });
+    hasPendingBallot = !!pendingEntitlement;
   }
 
   const activity = [
@@ -118,8 +125,10 @@ export default async function HomePage() {
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, 4);
 
-  const isPrimaryVoter = account.property.primaryVoterId === homeownerId;
-  const needsAction = balance > 0 || (!!openElection && isPrimaryVoter && !alreadyVoted);
+  const needsAction = (showPayments && balance > 0) || (showElections && !!openElection && hasPendingBallot);
+  const visibleActivity = activity.filter(
+    (item) => (item.kind === 'pay' && showPayments) || (item.kind === 'vote' && showElections),
+  );
 
   return (
     <div className="space-y-6 pb-4">
@@ -137,26 +146,33 @@ export default async function HomePage() {
             </div>
           )}
           <div className="min-w-0">
-            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-strong">Resident portal</p>
-            <h1 className="truncate text-xl font-semibold tracking-tight text-ink sm:text-2xl">Good day, {firstName}</h1>
+            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-strong">
+              Resident portal
+            </p>
+            <h1 className="truncate text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+              Good day, {firstName}
+            </h1>
             <p className="mt-1 truncate text-xs text-ink-muted sm:text-sm">
               {organization.name}
               {unit ? ` · Unit ${unit}` : ''}
             </p>
           </div>
         </div>
-        <Link
-          href="/notices"
-          aria-label="View notices"
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-surface-hover"
-        >
-          <IconBell width={18} height={18} />
-          {totalNotices > 0 && (
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accentwarm ring-2 ring-surface" />
-          )}
-        </Link>
+        {showAnnouncements && (
+          <Link
+            href="/notices"
+            aria-label="View notices"
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-surface-hover"
+          >
+            <IconBell width={18} height={18} />
+            {totalNotices > 0 && (
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accentwarm ring-2 ring-surface" />
+            )}
+          </Link>
+        )}
       </header>
 
+      {(showPayments || showAnnouncements) && (
       <section aria-labelledby="overview-heading">
         <div className="mb-3 flex items-end justify-between">
           <div>
@@ -172,11 +188,14 @@ export default async function HomePage() {
           )}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Link
+          {showPayments && <Link
             href="/dues"
-            className={`ui-card-interactive relative overflow-hidden rounded-[24px] border border-line/60 bg-gradient-to-br p-4 shadow-[0_10px_28px_-20px_var(--brand)] sm:p-5 ${balance > 0 ? 'from-warning-soft to-surface' : 'from-brand-soft to-surface'}`}
+            className={`ui-card-interactive border-line/60 relative overflow-hidden rounded-[24px] border bg-gradient-to-br p-4 shadow-[0_10px_28px_-20px_var(--brand)] sm:p-5 ${balance > 0 ? 'from-warning-soft to-surface' : 'from-brand-soft to-surface'}`}
           >
-            <span aria-hidden="true" className="pointer-events-none absolute -right-7 -top-8 h-28 w-28 rounded-full border-[18px] border-white/30" />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-7 -top-8 h-28 w-28 rounded-full border-[18px] border-white/30"
+            />
             <span
               className={`mb-4 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${balance > 0 ? 'bg-warning text-white' : 'bg-brand text-on-brand'}`}
             >
@@ -187,12 +206,15 @@ export default async function HomePage() {
             <p className={`mt-1 text-xs ${balance > 0 ? 'text-brand-strong' : 'text-ink-muted'}`}>
               {balance > 0 ? 'View and pay balance' : 'No payment due'}
             </p>
-          </Link>
-          <Link
+          </Link>}
+          {showAnnouncements && <Link
             href="/notices"
-            className="ui-card-interactive relative overflow-hidden rounded-[24px] border border-accentwarm/10 bg-gradient-to-br from-accentwarm-soft to-surface p-4 shadow-[0_10px_28px_-20px_var(--accent-warm)] sm:p-5"
+            className="ui-card-interactive border-accentwarm/10 relative overflow-hidden rounded-[24px] border bg-gradient-to-br from-accentwarm-soft to-surface p-4 shadow-[0_10px_28px_-20px_var(--accent-warm)] sm:p-5"
           >
-            <span aria-hidden="true" className="pointer-events-none absolute -right-7 -top-8 h-28 w-28 rounded-full border-[18px] border-white/30" />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-7 -top-8 h-28 w-28 rounded-full border-[18px] border-white/30"
+            />
             <span className="mb-4 inline-flex rounded-full bg-accentwarm px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
               Community
             </span>
@@ -201,47 +223,39 @@ export default async function HomePage() {
             <p className="mt-1 text-xs font-medium text-accentwarm">
               {totalNotices === 1 ? 'Current notice' : 'Current notices'}
             </p>
-          </Link>
+          </Link>}
         </div>
       </section>
+      )}
 
-      {openElection && !alreadyVoted && (
+      {showElections && openElection && hasPendingBallot && (
         <section aria-labelledby="actions-heading">
           <h2 id="actions-heading" className="mb-3 text-base font-semibold">
             Your next step
           </h2>
-          {isPrimaryVoter ? (
-            <Link
-              href="/vote"
-              className="ui-card-interactive flex items-center justify-between gap-4 rounded-2xl bg-brand p-4 text-on-brand shadow-sm"
-            >
-              <div className="min-w-0">
-                <span className="mb-2 inline-flex rounded-full bg-brand px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-brand">
-                  Voting is open
-                </span>
-                <p className="text-sm font-semibold">{openElection.title}</p>
-                <p className="mt-1 text-xs text-on-brand-muted">
-                  Cast your vote
-                  {openElection.closesAt ? ` by ${formatShortDate(openElection.closesAt)}` : ''}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-full bg-on-brand-surface px-4 py-2 text-xs font-semibold text-brand">
-                Vote
+          <Link
+            href="/vote"
+            className="ui-card-interactive flex items-center justify-between gap-4 rounded-2xl bg-brand p-4 text-on-brand shadow-sm"
+          >
+            <div className="min-w-0">
+              <span className="mb-2 inline-flex rounded-full bg-brand px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-brand">
+                Voting is open
               </span>
-            </Link>
-          ) : (
-            <div className="rounded-2xl border border-line bg-surface p-4">
-              <p className="text-sm font-semibold text-ink">{openElection.title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-                Only your property&apos;s administrator-designated primary voter can cast its ballot.
-                Contact your administrator if you believe you should be designated.
+              <p className="text-sm font-semibold">{openElection.title}</p>
+              <p className="mt-1 text-xs text-on-brand-muted">
+                Cast your vote or submit an authorized proxy ballot
+                {openElection.closesAt ? ` by ${formatShortDate(openElection.closesAt)}` : ''}
               </p>
             </div>
-          )}
+            <span className="shrink-0 rounded-full bg-on-brand-surface px-4 py-2 text-xs font-semibold text-brand">
+              Vote
+            </span>
+          </Link>
         </section>
       )}
 
-      {(committees.length > 0 || canApprove) && (
+      {showBoard &&
+        (canApprove || (showExpenses && committees.length > 0)) && (
         <section
           aria-labelledby="board-heading"
           className="rounded-2xl bg-purple-soft p-4 shadow-sm"
@@ -278,7 +292,7 @@ export default async function HomePage() {
                 </span>
               </Link>
             )}
-            {committees.length > 0 && (
+            {showExpenses && committees.length > 0 && (
               <Link
                 href="/expense-requests"
                 className="ui-card-interactive flex items-center justify-between gap-3 rounded-xl bg-surface p-3.5 shadow-sm"
@@ -298,7 +312,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section aria-labelledby="notices-heading">
+      {showAnnouncements && <section aria-labelledby="notices-heading">
         <div className="mb-2 flex items-center justify-between">
           <div>
             <h2 id="notices-heading" className="text-base font-semibold">
@@ -340,9 +354,9 @@ export default async function HomePage() {
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
-      {activity.length > 0 && (
+      {visibleActivity.length > 0 && (
         <section aria-labelledby="activity-heading">
           <div className="mb-2 flex items-center justify-between">
             <div>
@@ -351,12 +365,14 @@ export default async function HomePage() {
               </h2>
               <p className="mt-0.5 text-xs text-ink-muted">Your latest payments and votes</p>
             </div>
-            <Link href="/dues/history" className="text-xs font-medium text-brand-strong">
-              Payment history
-            </Link>
+            {showPayments && (
+              <Link href="/dues/history" className="text-xs font-medium text-brand-strong">
+                Payment history
+              </Link>
+            )}
           </div>
           <div className="rounded-2xl bg-surface-muted px-3.5 shadow-sm">
-            {activity.map((item, index) => (
+            {visibleActivity.map((item, index) => (
               <div
                 key={item.id}
                 className={`flex items-center gap-3 py-3 ${index > 0 ? 'border-line/50 border-t' : ''}`}

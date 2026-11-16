@@ -153,6 +153,18 @@ export async function importResidentsAction(rows: ResidentImportInputRow[]) {
       skipDuplicates: true,
     });
 
+    const importedHomeowners = await tx.homeowner.findMany({
+      where: { email: { in: validRows.map((row) => row.email) } },
+      select: { id: true, propertyId: true },
+    });
+    await tx.propertyMembership.createMany({
+      data: importedHomeowners.map(({ id, propertyId }) => ({
+        homeownerId: id,
+        propertyId,
+      })),
+      skipDuplicates: true,
+    });
+
     return created;
   });
 
@@ -247,6 +259,7 @@ export async function createInviteAction(
         lotAreaSqm,
         inviteToken,
         invitedAt: new Date(),
+        propertyMemberships: { create: { propertyId: property.id } },
       },
     });
   });
@@ -323,19 +336,11 @@ export async function updateResidentAction(
         propertyId: property.id,
       },
     });
-
-    if (isMoving) {
-      const oldProperty = await tx.property.findUniqueOrThrow({
-        where: { id: target.propertyId },
-        select: { primaryVoterId: true },
-      });
-      if (oldProperty.primaryVoterId === homeownerId) {
-        await tx.property.update({
-          where: { id: target.propertyId },
-          data: { primaryVoterId: null },
-        });
-      }
-    }
+    await tx.propertyMembership.upsert({
+      where: { propertyId_homeownerId: { propertyId: property.id, homeownerId } },
+      create: { propertyId: property.id, homeownerId },
+      update: {},
+    });
   });
 
   revalidatePath('/admin/invites');
@@ -441,38 +446,34 @@ export async function setPrimaryVoterAction(propertyId: string, homeownerId: str
 
   const homeowner = await prisma.homeowner.findUnique({
     where: { id: homeownerId },
-    select: { propertyId: true, passwordHash: true },
+    select: { passwordHash: true },
   });
-  if (!homeowner || homeowner.propertyId !== propertyId) {
+  if (!homeowner) {
     return { error: 'Choose a resident linked to this property.' };
   }
   if (!homeowner.passwordHash) {
-    return { error: 'Only an activated resident can be assigned as the primary voter.' };
+    return { error: 'Only an activated resident can be assigned as the primary owner.' };
   }
+  const membership = await prisma.propertyMembership.findUnique({
+    where: { propertyId_homeownerId: { propertyId, homeownerId } },
+    select: { propertyId: true },
+  });
+  if (!membership) return { error: 'Link this account to the property before assigning it.' };
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
     select: { primaryVoterId: true },
   });
   if (!property) return { error: 'Property not found.' };
   if (property.primaryVoterId !== homeownerId) {
-    const activeBallotVotes = await prisma.vote.findMany({
+    const openElection = await prisma.election.findFirst({
       where: {
-        propertyId,
-        position: {
-          election: {
-            votingOpensAt: { lte: new Date() },
-            OR: [{ closesAt: null }, { closesAt: { gt: new Date() } }],
-          },
-        },
+        votingOpensAt: { lte: new Date() },
+        OR: [{ closesAt: null }, { closesAt: { gt: new Date() } }],
       },
-      select: { homeownerId: true },
+      select: { id: true },
     });
-    const activeVoterIds = new Set(activeBallotVotes.map((vote) => vote.homeownerId));
-    if (
-      activeVoterIds.size > 1 ||
-      (activeVoterIds.size === 1 && !activeVoterIds.has(homeownerId))
-    ) {
-      return { error: 'The primary voter cannot be changed after this property starts voting.' };
+    if (openElection) {
+      return { error: 'Primary owners cannot be changed while an election is open.' };
     }
   }
 
@@ -483,6 +484,78 @@ export async function setPrimaryVoterAction(propertyId: string, homeownerId: str
   revalidatePath('/admin/invites');
   revalidatePath('/vote');
   revalidatePath('/home');
+  revalidatePath('/results');
+  return { success: true };
+}
+
+export async function linkHomeownerToPropertyAction(propertyId: string, homeownerId: string) {
+  const admin = await getAdminOrNull();
+  if (!admin) return { error: 'You do not have permission to do this.' };
+  if (typeof propertyId !== 'string' || typeof homeownerId !== 'string') {
+    return { error: 'Choose a resident and property.' };
+  }
+  const [property, homeowner] = await Promise.all([
+    prisma.property.findUnique({ where: { id: propertyId }, select: { id: true } }),
+    prisma.homeowner.findUnique({ where: { id: homeownerId }, select: { id: true } }),
+  ]);
+  if (!property || !homeowner) return { error: 'The resident or property could not be found.' };
+
+  await prisma.propertyMembership.upsert({
+    where: { propertyId_homeownerId: { propertyId, homeownerId } },
+    create: { propertyId, homeownerId },
+    update: {},
+  });
+  revalidatePath('/admin/invites');
+  return { success: true };
+}
+
+export async function removeHomeownerFromPropertyAction(propertyId: string, homeownerId: string) {
+  const admin = await getAdminOrNull();
+  if (!admin) return { error: 'You do not have permission to do this.' };
+
+  const [property, homeowner, membership] = await Promise.all([
+    prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { primaryVoterId: true },
+    }),
+    prisma.homeowner.findUnique({ where: { id: homeownerId }, select: { propertyId: true } }),
+    prisma.propertyMembership.findUnique({
+      where: { propertyId_homeownerId: { propertyId, homeownerId } },
+      select: { propertyId: true },
+    }),
+  ]);
+  if (!property || !homeowner || !membership) {
+    return { error: 'The resident is not linked to this property.' };
+  }
+  if (homeowner.propertyId === propertyId) {
+    return { error: "Change the resident's home property from Edit details instead." };
+  }
+  if (property.primaryVoterId === homeownerId) {
+    const openElection = await prisma.election.findFirst({
+      where: {
+        votingOpensAt: { lte: new Date() },
+        OR: [{ closesAt: null }, { closesAt: { gt: new Date() } }],
+      },
+      select: { id: true },
+    });
+    if (openElection) {
+      return { error: 'A primary owner cannot be removed while an election is open.' };
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (property.primaryVoterId === homeownerId) {
+      await tx.property.updateMany({
+        where: { id: propertyId, primaryVoterId: homeownerId },
+        data: { primaryVoterId: null },
+      });
+    }
+    await tx.propertyMembership.delete({
+      where: { propertyId_homeownerId: { propertyId, homeownerId } },
+    });
+  });
+  revalidatePath('/admin/invites');
+  revalidatePath('/results');
   return { success: true };
 }
 

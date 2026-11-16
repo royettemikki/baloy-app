@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  resetElectionSeedAction,
+  resetElectionDataAction,
   reseedAnnouncementsAction,
   reseedDuesAction,
   resetDuesAction,
@@ -12,9 +12,16 @@ import {
   runReminderCheckNowAction,
   listAllResidentsAction,
   setTestPasswordAction,
+  updateFeatureVisibilityAction,
 } from '@/app/actions/devTools';
 import { ReminderOutcome } from '@/lib/duesReminders';
 import { runLateFeeCheckNowAction } from '@/app/actions/devTools';
+import { FEATURE_VISIBILITY } from '@/lib/featureVisibilityConfig';
+import type {
+  FeatureAudience,
+  FeatureKey,
+  FeatureVisibilityState,
+} from '@/lib/featureVisibilityConfig';
 
 type ToolKey = 'election' | 'announcements' | 'duesAdd' | 'duesReset';
 
@@ -23,9 +30,9 @@ const TOOLS: { key: ToolKey; title: string; description: string; danger: string 
     key: 'election',
     title: 'Reset election data',
     description:
-      'Wipes every election, position, candidate, slate, vote, candidacy filing, and expense request, then creates one fresh 2-position election.',
+      'Deletes all elections, ballots, votes, positions, candidates, slates, filings, and expense requests. No draft or sample election is recreated.',
     danger:
-      'This permanently deletes all current election, voting, filing, and expense-request history. Already-logged expenses are not affected.',
+      'This permanently deletes all election history and pending election-related requests. Residents, dues, announcements, and logged expenses are preserved.',
   },
   {
     key: 'announcements',
@@ -50,11 +57,97 @@ const TOOLS: { key: ToolKey; title: string; description: string; danger: string 
 ];
 
 const ACTIONS: Record<ToolKey, () => Promise<any>> = {
-  election: resetElectionSeedAction,
+  election: resetElectionDataAction,
   announcements: reseedAnnouncementsAction,
   duesAdd: reseedDuesAction,
   duesReset: resetDuesAction,
 };
+
+function FeatureVisibilitySection({
+  initialSettings,
+}: {
+  initialSettings: FeatureVisibilityState;
+}) {
+  const [settings, setSettings] = useState(initialSettings);
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  function toggleFeature(key: FeatureKey, audience: FeatureAudience) {
+    const enabled = !settings[key][audience];
+    setMessage(null);
+    startTransition(async () => {
+      const result = await updateFeatureVisibilityAction(key, audience, enabled);
+      if ('error' in result) {
+        setMessage(result.error ?? 'Unable to update feature visibility.');
+        return;
+      }
+
+      setSettings((current) => ({
+        ...current,
+        [key]: { ...current[key], [audience]: enabled },
+      }));
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
+      <p className="mb-1 text-sm font-medium">Feature visibility</p>
+      <p className="mb-4 text-xs text-ink-soft">
+        Turn features on or off separately for admins and residents. Hidden features are removed
+        from navigation and blocked when opened directly.
+      </p>
+      {message && (
+        <p role="alert" className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+          {message}
+        </p>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[420px] text-left text-xs">
+          <thead>
+            <tr className="border-b border-line text-ink-muted">
+              <th className="pb-2 pr-3 font-medium">Feature</th>
+              <th className="px-3 pb-2 text-center font-medium">Admin</th>
+              <th className="pb-2 pl-3 text-center font-medium">Resident</th>
+            </tr>
+          </thead>
+          <tbody>
+            {FEATURE_VISIBILITY.map((feature) => (
+              <tr key={feature.key} className="border-line/70 border-b last:border-0">
+                <th scope="row" className="py-3 pr-3 font-medium text-ink">
+                  {feature.label}
+                </th>
+                {(['admin', 'resident'] as const).map((audience) => (
+                  <td key={audience} className="px-3 py-2 text-center">
+                    {feature[audience] ? (
+                      <button
+                        type="button"
+                        aria-pressed={settings[feature.key][audience]}
+                        aria-label={`${feature.label}: ${settings[feature.key][audience] ? 'visible' : 'hidden'} for ${audience}s`}
+                        onClick={() => toggleFeature(feature.key, audience)}
+                        disabled={pending}
+                        className={`min-w-16 rounded-full px-3 py-1.5 font-medium transition-colors disabled:opacity-60 ${
+                          settings[feature.key][audience]
+                            ? 'bg-brand-soft text-brand-strong'
+                            : 'bg-surface-muted text-ink-muted'
+                        }`}
+                      >
+                        {settings[feature.key][audience] ? 'Visible' : 'Hidden'}
+                      </button>
+                    ) : (
+                      <span className="text-ink-muted">—</span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function SeedToolsSection() {
   const [confirming, setConfirming] = useState<ToolKey | null>(null);
@@ -187,7 +280,7 @@ function SmsTestSection() {
           <select
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
-            className="flex-1 rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm"
+            className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           >
             <option value="">Select a resident…</option>
             {residents.map((r) => (
@@ -357,7 +450,7 @@ function SetPasswordSection() {
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
-          className="flex-1 rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm"
+          className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
         >
           <option value="">Select a resident…</option>
           {residents.map((r) => (
@@ -371,7 +464,7 @@ function SetPasswordSection() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="New password (min 8 characters)"
-          className="flex-1 rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm"
+          className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
         />
         <button
           onClick={handleSet}
@@ -388,9 +481,17 @@ function SetPasswordSection() {
   );
 }
 
-export default function DevToolsPanel() {
+export default function DevToolsPanel({
+  featureSettings,
+}: {
+  featureSettings: FeatureVisibilityState;
+}) {
   return (
     <div className="flex flex-col gap-8">
+      <div>
+        <p className="mb-3 text-sm font-medium text-ink-soft">Feature controls</p>
+        <FeatureVisibilitySection initialSettings={featureSettings} />
+      </div>
       <div>
         <p className="mb-3 text-sm font-medium text-ink-soft">SMS reminders</p>
         <SmsTestSection />

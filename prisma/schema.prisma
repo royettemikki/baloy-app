@@ -8,54 +8,70 @@ datasource db {
 }
 
 model Homeowner {
-  id                       String            @id @default(cuid())
-  email                    String            @unique
+  id                       String               @id @default(cuid())
+  email                    String               @unique
   passwordHash             String?
   fullName                 String
   unit                     String
-  lotAreaSqm               Decimal?          @db.Decimal(10, 2)
-  monthlyDuesMode          DuesRateMode      @default(Fixed)
-  monthlyDuesRate          Decimal           @default(0) @db.Decimal(10, 2)
-  duesRateOverride         Boolean           @default(false)
+  lotAreaSqm               Decimal?             @db.Decimal(10, 2)
+  monthlyDuesMode          DuesRateMode         @default(Fixed)
+  monthlyDuesRate          Decimal              @default(0) @db.Decimal(10, 2)
+  duesRateOverride         Boolean              @default(false)
   phoneNumber              String?
   emergencyContact         String?
   emergencyContactName     String?
   avatarUrl                String?
-  isAdmin                  Boolean           @default(false)
-  creditBalance            Decimal           @default(0) @db.Decimal(10, 2)
-  notifyEmailAnnouncements Boolean           @default(true)
-  notifyTextDuesReminders  Boolean           @default(true)
-  notifyElectionAlerts     Boolean           @default(false)
-  inviteToken              String?           @unique
+  isAdmin                  Boolean              @default(false)
+  creditBalance            Decimal              @default(0) @db.Decimal(10, 2)
+  notifyEmailAnnouncements Boolean              @default(true)
+  notifyTextDuesReminders  Boolean              @default(true)
+  notifyElectionAlerts     Boolean              @default(false)
+  inviteToken              String?              @unique
   invitedAt                DateTime?
   joinedAt                 DateTime?
-  createdAt                DateTime          @default(now())
+  createdAt                DateTime             @default(now())
   propertyId               String
-  property                 Property          @relation("PropertyResidents", fields: [propertyId], references: [id])
-  primaryForProperty       Property?         @relation("PrimaryPropertyVoter")
+  property                 Property             @relation("PropertyResidents", fields: [propertyId], references: [id])
+  primaryForProperty       Property[]           @relation("PrimaryPropertyVoter")
+  propertyMemberships      PropertyMembership[]
   duesCharges              DuesCharge[]
   payments                 Payment[]
   votes                    Vote[]
+  electionVoters           ElectionVoter[]
+  proxyAssignments         ElectionVoter[]      @relation("VoterProxy")
+  castElectionVoterRecords ElectionVoter[]      @relation("ElectionVoterCaster")
   candidateLinks           Candidate[]
   expenseRequests          ExpenseRequest[]
   candidacyFilings         CandidacyFiling[]
 }
 
 model Property {
-  id               String           @id @default(cuid())
+  id               String               @id @default(cuid())
   unit             String
-  normalizedUnit   String           @unique
-  lotAreaSqm       Decimal?         @db.Decimal(10, 2)
-  monthlyDuesMode  DuesRateMode     @default(Fixed)
-  monthlyDuesRate  Decimal          @default(0) @db.Decimal(10, 2)
-  duesRateOverride Boolean          @default(false)
-  creditBalance    Decimal          @default(0) @db.Decimal(10, 2)
-  needsReview      Boolean          @default(false)
-  primaryVoterId   String?          @unique
-  primaryVoter     Homeowner?       @relation("PrimaryPropertyVoter", fields: [primaryVoterId], references: [id], onDelete: SetNull)
-  homeowners       Homeowner[]      @relation("PropertyResidents")
+  normalizedUnit   String               @unique
+  lotAreaSqm       Decimal?             @db.Decimal(10, 2)
+  monthlyDuesMode  DuesRateMode         @default(Fixed)
+  monthlyDuesRate  Decimal              @default(0) @db.Decimal(10, 2)
+  duesRateOverride Boolean              @default(false)
+  creditBalance    Decimal              @default(0) @db.Decimal(10, 2)
+  needsReview      Boolean              @default(false)
+  primaryVoterId   String?
+  primaryVoter     Homeowner?           @relation("PrimaryPropertyVoter", fields: [primaryVoterId], references: [id], onDelete: SetNull)
+  homeowners       Homeowner[]          @relation("PropertyResidents")
+  memberships      PropertyMembership[]
   votes            Vote[]
   ballots          PropertyBallot[]
+}
+
+model PropertyMembership {
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  homeownerId String
+  homeowner   Homeowner @relation(fields: [homeownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@id([propertyId, homeownerId])
+  @@index([homeownerId])
 }
 
 enum ChargeStatus {
@@ -144,10 +160,10 @@ model Slate {
 }
 
 model Election {
-  id                  Int        @id @default(autoincrement())
+  id                  Int             @id @default(autoincrement())
   title               String
-  opensAt             DateTime   @default(now())
-  termDurationYears   Int        @default(2)
+  opensAt             DateTime        @default(now())
+  termDurationYears   Int             @default(2)
   filingDurationHours Float
   votingDurationHours Float
   filingOpensAt       DateTime?
@@ -156,6 +172,7 @@ model Election {
   closesAt            DateTime?
   positions           Position[]
   slates              Slate[]
+  voterRoll           ElectionVoter[]
 }
 
 model Position {
@@ -197,11 +214,39 @@ model Vote {
   property         Property        @relation(fields: [propertyId], references: [id])
   propertyBallotId Int?
   propertyBallot   PropertyBallot? @relation(fields: [propertyBallotId], references: [id])
+  electionBallotId Int?
+  electionBallot   ElectionBallot? @relation(fields: [electionBallotId], references: [id], onDelete: Cascade)
   candidateId      Int
   candidate        Candidate       @relation(fields: [candidateId], references: [id])
   homeownerId      String
   homeowner        Homeowner       @relation(fields: [homeownerId], references: [id])
   castAt           DateTime        @default(now())
+
+  @@index([electionBallotId])
+}
+
+model ElectionVoter {
+  id          Int             @id @default(autoincrement())
+  electionId  Int
+  election    Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  homeownerId String
+  homeowner   Homeowner       @relation(fields: [homeownerId], references: [id], onDelete: Cascade)
+  proxyId     String?
+  proxy       Homeowner?      @relation("VoterProxy", fields: [proxyId], references: [id], onDelete: SetNull)
+  castAt      DateTime?
+  castById    String?
+  castBy      Homeowner?      @relation("ElectionVoterCaster", fields: [castById], references: [id], onDelete: SetNull)
+  ballot      ElectionBallot?
+
+  @@unique([electionId, homeownerId])
+  @@index([proxyId, electionId])
+}
+
+model ElectionBallot {
+  id      Int           @id @default(autoincrement())
+  voterId Int           @unique
+  voter   ElectionVoter @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  votes   Vote[]
 }
 
 model PropertyBallot {
@@ -281,4 +326,11 @@ model CandidacyFiling {
   resultingCandidate    Candidate?            @relation(fields: [resultingCandidateId], references: [id])
   createdAt             DateTime              @default(now())
   reviewedAt            DateTime?
+}
+
+model AppFeatureVisibility {
+  key            String   @id
+  adminEnabled   Boolean  @default(true)
+  residentEnabled Boolean @default(true)
+  updatedAt      DateTime @updatedAt
 }

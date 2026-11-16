@@ -8,9 +8,7 @@ async function main() {
   const [, , email, fullName, unit] = process.argv;
 
   if (!email || !fullName || !unit) {
-    console.log(
-      'Usage: npx tsx scripts/create-invite.ts <email> "<full name>" <unit>',
-    );
+    console.log('Usage: npx tsx scripts/create-invite.ts <email> "<full name>" <unit>');
     process.exit(1);
   }
 
@@ -32,14 +30,13 @@ async function main() {
         propertyId: property.id,
         inviteToken,
         invitedAt: new Date(),
+        propertyMemberships: { create: { propertyId: property.id } },
       },
     });
   });
 
   console.log('Homeowner record created.');
-  console.log(
-    `Invite link: http://localhost:3000/register?token=${inviteToken}`,
-  );
+  console.log(`Invite link: http://localhost:3000/register?token=${inviteToken}`);
 }
 
 main().finally(() => prisma.$disconnect());

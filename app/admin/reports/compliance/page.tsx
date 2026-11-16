@@ -7,6 +7,7 @@ export default async function ComplianceReportPage() {
   const properties = await prisma.property.findMany({
     where: { homeowners: { some: { passwordHash: { not: null } } } },
     include: {
+      primaryVoter: { select: { fullName: true, email: true } },
       homeowners: {
         where: { passwordHash: { not: null } },
         include: { duesCharges: { where: { status: { not: 'Paid' } } } },
@@ -17,9 +18,7 @@ export default async function ComplianceReportPage() {
 
   const rows = properties
     .map((property) => {
-      const representative =
-        property.homeowners.find((homeowner) => homeowner.id === property.primaryVoterId) ??
-        property.homeowners[0];
+      const representative = property.primaryVoter ?? property.homeowners[0];
       if (!representative) return null;
       const charges = property.homeowners.flatMap((homeowner) => homeowner.duesCharges);
       const owed = charges.reduce(

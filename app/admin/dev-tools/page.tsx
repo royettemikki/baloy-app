@@ -1,10 +1,12 @@
 import { redirect } from 'next/navigation';
 import DevToolsPanel from '@/components/admin/devTools/DevToolsPanel';
+import { getFeatureVisibilityState } from '@/lib/featureVisibility';
 
-export default function DevToolsPage() {
+export default async function DevToolsPage() {
   if (process.env.NODE_ENV === 'production') {
     redirect('/admin');
   }
+  const featureSettings = await getFeatureVisibilityState();
 
   return (
     <div>
@@ -15,7 +17,7 @@ export default function DevToolsPage() {
           redirects away entirely on the live production app.
         </p>
       </div>
-      <DevToolsPanel />
+      <DevToolsPanel featureSettings={featureSettings} />
     </div>
   );
 }

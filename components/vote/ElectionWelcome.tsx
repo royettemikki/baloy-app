@@ -5,9 +5,11 @@ import { formatLongDate } from '@/lib/formatDate';
 export default function ElectionWelcome({
   election,
   onStart,
+  onChooseProxy,
 }: {
   election: Election;
   onStart: () => void;
+  onChooseProxy?: () => void;
 }) {
   const candidateCount = election.positions.reduce(
     (total, position) => total + position.candidates.length,
@@ -105,6 +107,15 @@ export default function ElectionWelcome({
       >
         <IconCheck width={17} height={17} /> Start voting
       </button>
+      {onChooseProxy && (
+        <button
+          type="button"
+          onClick={onChooseProxy}
+          className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-ink-soft transition hover:bg-surface-hover"
+        >
+          Choose a proxy instead
+        </button>
+      )}
       <p className="mt-2 text-center text-[10px] text-ink-muted">
         You can review your choices before submitting your ballot.
       </p>

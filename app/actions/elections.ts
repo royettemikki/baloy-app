@@ -20,10 +20,16 @@ async function getBallotStructureLockError(electionId: number) {
   return null;
 }
 
-export async function castBallotAction(selections: { positionId: number; candidateId: number }[]) {
+export async function castBallotAction(
+  voterId: number,
+  selections: { positionId: number; candidateId: number }[],
+) {
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id;
   if (!homeownerId) return { error: 'You must be signed in.' };
+  if (!Number.isSafeInteger(voterId) || voterId <= 0) {
+    return { error: 'The voter selection is invalid.' };
+  }
   if (!Array.isArray(selections) || selections.length === 0) {
     return { error: 'Nothing to submit.' };
   }
@@ -35,15 +41,6 @@ export async function castBallotAction(selections: { positionId: number; candida
     )
   ) {
     return { error: 'One of your selections is invalid.' };
-  }
-
-  const homeowner = await prisma.homeowner.findUnique({
-    where: { id: homeownerId },
-    select: { propertyId: true, property: { select: { primaryVoterId: true } } },
-  });
-  if (!homeowner) return { error: 'Resident account not found.' };
-  if (homeowner.property.primaryVoterId !== homeownerId) {
-    return { error: "Only the property's primary voter can submit its ballot." };
   }
 
   const selectionsByPosition = new Map<number, number[]>();
@@ -78,18 +75,33 @@ export async function castBallotAction(selections: { positionId: number; candida
     where: { electionId: firstPosition.electionId },
     select: { id: true, seats: true },
   });
-  const previousVotes = await prisma.vote.findMany({
-    where: { propertyId: homeowner.propertyId, position: { electionId: firstPosition.electionId } },
-    select: { positionId: true },
+  const voter = await prisma.electionVoter.findUnique({
+    where: { id: voterId },
+    select: {
+      electionId: true,
+      homeownerId: true,
+      proxyId: true,
+      castAt: true,
+      homeowner: { select: { propertyId: true } },
+    },
   });
-  const alreadyVotedPositionIds = new Set(previousVotes.map((vote) => vote.positionId));
-  const expectedPositionIds = electionPositions
-    .map(({ id }) => id)
-    .filter((id) => !alreadyVotedPositionIds.has(id))
-    .sort((a, b) => a - b);
+  if (!voter || voter.electionId !== firstPosition.electionId) {
+    return { error: 'You are not eligible to vote in this election.' };
+  }
+  if (voter.castAt) return { error: 'This voter has already submitted a ballot.' };
+  const expectedCasterId = voter.proxyId ?? voter.homeownerId;
+  if (homeownerId !== expectedCasterId) {
+    return {
+      error: voter.proxyId
+        ? 'Only the assigned proxy can submit this ballot.'
+        : 'You are not authorized to submit this ballot.',
+    };
+  }
+
+  const expectedPositionIds = electionPositions.map(({ id }) => id).sort((a, b) => a - b);
 
   if ([...selectedPositionIds].sort((a, b) => a - b).join(',') !== expectedPositionIds.join(',')) {
-    return { error: 'Submit at least one selection for every position remaining on your ballot.' };
+    return { error: 'Submit at least one selection for every position on your ballot.' };
   }
 
   const positionById = new Map(electionPositions.map((position) => [position.id, position]));
@@ -123,29 +135,90 @@ export async function castBallotAction(selections: { positionId: number; candida
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
-      for (const [positionId, candidateIds] of selectionsByPosition) {
-        const propertyBallot = await tx.propertyBallot.create({
-          data: { positionId, propertyId: homeowner.propertyId },
-        });
-        await tx.vote.createMany({
-          data: candidateIds.map((candidateId) => ({
-            positionId,
-            candidateId,
-            homeownerId,
-            propertyId: homeowner.propertyId,
-            propertyBallotId: propertyBallot.id,
-          })),
-        });
-      }
+    const submitted = await prisma.$transaction(async (tx) => {
+      const consumed = await tx.electionVoter.updateMany({
+        where: {
+          id: voterId,
+          electionId: firstPosition.electionId,
+          homeownerId: voter.homeownerId,
+          proxyId: voter.proxyId,
+          castAt: null,
+        },
+        data: { castAt: new Date(), castById: homeownerId },
+      });
+      if (consumed.count !== 1) return false;
+
+      const ballot = await tx.electionBallot.create({ data: { voterId } });
+      await tx.vote.createMany({
+        data: selections.map(({ positionId, candidateId }) => ({
+          positionId,
+          candidateId,
+          homeownerId: voter.homeownerId,
+          propertyId: voter.homeowner.propertyId,
+          electionBallotId: ballot.id,
+        })),
+      });
+      return true;
     });
+    if (!submitted) return { error: 'This voter has already submitted a ballot.' };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return { error: 'Your property ballot was submitted already. Refresh to see its status.' };
+      return { error: 'This voter has already submitted a ballot. Refresh to see its status.' };
     }
     throw error;
   }
 
+  return { success: true };
+}
+
+export async function setElectionProxyAction(electionId: number, proxyId: string | null) {
+  const session = await getServerSession(authOptions);
+  const homeownerId = (session?.user as any)?.id as string | undefined;
+  if (!homeownerId) return { error: 'You must be signed in.' };
+  if (!Number.isSafeInteger(electionId) || electionId <= 0) {
+    return { error: 'The election selection is invalid.' };
+  }
+  if (proxyId !== null && (typeof proxyId !== 'string' || proxyId === homeownerId)) {
+    return { error: 'Choose a different active account as your proxy.' };
+  }
+
+  const election = await prisma.election.findUnique({ where: { id: electionId } });
+  if (!election || !isVotingOpen(election)) {
+    return { error: 'Proxy assignments can only be changed while voting is open.' };
+  }
+  const voter = await prisma.electionVoter.findUnique({
+    where: { electionId_homeownerId: { electionId, homeownerId } },
+    select: { id: true, castAt: true, homeowner: { select: { propertyId: true } } },
+  });
+  if (!voter) return { error: 'Only an eligible primary owner can assign a proxy.' };
+  if (voter.castAt) return { error: 'A proxy cannot be changed after this ballot is submitted.' };
+
+  if (proxyId) {
+    const proxy = await prisma.homeowner.findUnique({
+      where: { id: proxyId },
+      select: {
+        passwordHash: true,
+        propertyMemberships: {
+          where: { propertyId: voter.homeowner.propertyId },
+          select: { propertyId: true },
+        },
+      },
+    });
+    if (!proxy?.passwordHash || proxy.propertyMemberships.length === 0) {
+      return { error: 'Choose an active account who is a member of your property as your proxy.' };
+    }
+  }
+
+  const updated = await prisma.electionVoter.updateMany({
+    where: { id: voter.id, castAt: null },
+    data: { proxyId },
+  });
+  if (updated.count !== 1) {
+    return { error: 'This ballot has already been submitted; its proxy can no longer be changed.' };
+  }
+
+  revalidatePath('/vote');
+  revalidatePath('/home');
   return { success: true };
 }
 
@@ -376,17 +449,45 @@ export async function startVotingAction(electionId: number) {
   const now = new Date();
   const closesAt = new Date(now.getTime() + election.votingDurationHours * 60 * 60 * 1000);
 
-  await prisma.election.update({
-    where: { id: electionId },
-    data: {
-      votingOpensAt: now,
-      closesAt,
-      filingClosesAt:
-        election.filingClosesAt && election.filingClosesAt < now ? election.filingClosesAt : now,
+  const primaryOwners = await prisma.property.findMany({
+    where: {
+      primaryVoterId: { not: null },
+      primaryVoter: { passwordHash: { not: null } },
     },
+    select: { primaryVoterId: true },
   });
+  const eligibleHomeownerIds = [
+    ...new Set(
+      primaryOwners.flatMap(({ primaryVoterId }) => (primaryVoterId ? [primaryVoterId] : [])),
+    ),
+  ];
+  if (eligibleHomeownerIds.length === 0) {
+    return { error: 'Assign at least one active primary owner before opening voting.' };
+  }
+
+  const started = await prisma.$transaction(async (tx) => {
+    const updated = await tx.election.updateMany({
+      where: { id: electionId, votingOpensAt: null },
+      data: {
+        votingOpensAt: now,
+        closesAt,
+        filingClosesAt:
+          election.filingClosesAt && election.filingClosesAt < now ? election.filingClosesAt : now,
+      },
+    });
+    if (updated.count !== 1) return false;
+    await tx.electionVoter.createMany({
+      data: eligibleHomeownerIds.map((homeownerId) => ({ electionId, homeownerId })),
+      skipDuplicates: true,
+    });
+    return true;
+  });
+  if (!started) return { error: 'Voting has already started.' };
 
   revalidatePath('/admin/elections');
+  revalidatePath('/vote');
+  revalidatePath('/home');
+  revalidatePath('/results');
   return { success: true };
 }
 

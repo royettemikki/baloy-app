@@ -26,7 +26,7 @@ async function main() {
         normalizedUnit: normalizePropertyUnit(trimmedUnit),
       },
     });
-    await tx.homeowner.upsert({
+    const homeowner = await tx.homeowner.upsert({
       where: { email },
       update: {},
       create: {
@@ -36,6 +36,11 @@ async function main() {
         unit: property.unit,
         propertyId: property.id,
       },
+    });
+    await tx.propertyMembership.upsert({
+      where: { propertyId_homeownerId: { propertyId: property.id, homeownerId: homeowner.id } },
+      create: { propertyId: property.id, homeownerId: homeowner.id },
+      update: {},
     });
   });
   console.log(`Seeded resident ${email}.`);

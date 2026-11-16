@@ -1,5 +1,29 @@
 import { prisma } from '@/lib/prisma';
 
+export function getWinningCandidateIds(
+  candidates: { id: number; votes: number }[],
+  seats: number,
+): number[] {
+  const ranked = candidates
+    .filter((candidate) => candidate.votes > 0)
+    .sort((a, b) => b.votes - a.votes || a.id - b.id);
+  const winners: number[] = [];
+
+  for (let index = 0; index < ranked.length && winners.length < seats;) {
+    let end = index + 1;
+    while (end < ranked.length && ranked[end].votes === ranked[index].votes) end++;
+
+    const tiedCandidates = ranked.slice(index, end);
+    const remainingSeats = seats - winners.length;
+    if (tiedCandidates.length > remainingSeats) break;
+
+    winners.push(...tiedCandidates.map((candidate) => candidate.id));
+    index = end;
+  }
+
+  return winners;
+}
+
 export async function getPositionWinnerIds(positionId: number): Promise<number[]> {
   const position = await prisma.position.findUnique({
     where: { id: positionId },
@@ -7,11 +31,10 @@ export async function getPositionWinnerIds(positionId: number): Promise<number[]
   });
   if (!position) return [];
 
-  return [...position.candidates]
-    .filter((candidate) => candidate.votes.length > 0)
-    .sort((a, b) => b.votes.length - a.votes.length || a.id - b.id)
-    .slice(0, position.seats)
-    .map((c) => c.id);
+  return getWinningCandidateIds(
+    position.candidates.map((candidate) => ({ id: candidate.id, votes: candidate.votes.length })),
+    position.seats,
+  );
 }
 
 export type Officeholder = {
@@ -49,11 +72,13 @@ export async function getCurrentOfficeholders(): Promise<Officeholder[]> {
     for (const position of election.positions) {
       if (seenTitles.has(position.title)) continue; // a more recent election already decided this title
 
-      const winnerIds = [...position.candidates]
-        .filter((candidate) => candidate.votes.length > 0)
-        .sort((a, b) => b.votes.length - a.votes.length || a.id - b.id)
-        .slice(0, position.seats)
-        .map((c) => c.id);
+      const winnerIds = getWinningCandidateIds(
+        position.candidates.map((candidate) => ({
+          id: candidate.id,
+          votes: candidate.votes.length,
+        })),
+        position.seats,
+      );
 
       if (winnerIds.length === 0) continue;
 

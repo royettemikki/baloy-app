@@ -13,6 +13,7 @@ import {
   IconTrash,
 } from '@/components/Icons';
 import CopyrightFooter from '@/components/CopyrightFooter';
+import type { FeatureKey } from '@/lib/featureVisibilityConfig';
 
 type Counts = {
   pendingInvites: number;
@@ -20,44 +21,73 @@ type Counts = {
   pendingExpenses: number;
 };
 
-function getGroups(isDev: boolean, counts: Counts) {
+function getGroups(isDev: boolean, counts: Counts, enabledFeatures: FeatureKey[]) {
   const main = [
     { href: '/admin', label: 'Dashboard', Icon: IconGrid },
-    { href: '/admin/announcements', label: 'Announcements', Icon: IconMegaphone },
-    { href: '/admin/elections', label: 'Elections', Icon: IconBallot },
+    {
+      href: '/admin/announcements',
+      label: 'Announcements',
+      Icon: IconMegaphone,
+      feature: 'announcements' as const,
+    },
+    {
+      href: '/admin/elections',
+      label: 'Elections',
+      Icon: IconBallot,
+      feature: 'elections' as const,
+    },
   ];
   const manage = [
-    { href: '/admin/invites', label: 'Residents', Icon: IconUser, badge: counts.pendingInvites },
-    { href: '/admin/payments', label: 'Payments', Icon: IconCard, badge: counts.pendingPayments },
+    {
+      href: '/admin/invites',
+      label: 'Residents',
+      Icon: IconUser,
+      badge: counts.pendingInvites,
+      feature: 'residents' as const,
+    },
+    {
+      href: '/admin/payments',
+      label: 'Payments',
+      Icon: IconCard,
+      badge: counts.pendingPayments,
+      feature: 'payments' as const,
+    },
     {
       href: '/admin/expenses',
       label: 'Expenses',
       Icon: IconFileText,
       badge: counts.pendingExpenses,
+      feature: 'expenses' as const,
     },
-    { href: '/admin/reports', label: 'Reports', Icon: IconBarChart },
+    { href: '/admin/reports', label: 'Reports', Icon: IconBarChart, feature: 'reports' as const },
   ];
+  const visibleMain = main.filter(
+    (item) => item.feature === undefined || enabledFeatures.includes(item.feature),
+  );
+  const visibleManage = manage.filter((item) => enabledFeatures.includes(item.feature));
   return {
-    main,
+    main: visibleMain,
     manage: isDev
-      ? [...manage, { href: '/admin/dev-tools', label: 'Dev Tools', Icon: IconTrash }]
-      : manage,
+      ? [...visibleManage, { href: '/admin/dev-tools', label: 'Dev Tools', Icon: IconTrash }]
+      : visibleManage,
   };
 }
 
 export default function AdminSidebar({
   isDev,
+  enabledFeatures,
   mobileOpen,
   onClose,
   counts,
 }: {
   isDev: boolean;
+  enabledFeatures: FeatureKey[];
   mobileOpen: boolean;
   onClose: () => void;
   counts: Counts;
 }) {
   const pathname = usePathname();
-  const { main, manage } = getGroups(isDev, counts);
+  const { main, manage } = getGroups(isDev, counts, enabledFeatures);
 
   const renderLink = ({
     href,

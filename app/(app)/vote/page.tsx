@@ -1,16 +1,20 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import VoteWizard from '@/components/vote/VoteWizard';
 import BallotSummary from '@/components/vote/BallotSummary';
+import BallotComplete from '@/components/vote/BallotComplete';
+import VotingEntitlementPanel from '@/components/vote/VotingEntitlementPanel';
 import AutoRefresh from '@/components/AutoRefresh';
 import { isVotingOpen, isFilingOpen, isAwaitingVotingStart } from '@/lib/electionWindows';
 import { IconBallot, IconBarChart, IconHome } from '@/components/Icons';
 
-export default async function VotePage() {
+export default async function VotePage({ searchParams }: { searchParams?: { voterId?: string } }) {
   const session = await getServerSession(authOptions);
-  const homeownerId = (session?.user as any)?.id as string;
+  const homeownerId = (session?.user as any)?.id as string | undefined;
+  if (!homeownerId) redirect('/login');
 
   const now = new Date();
   const [candidateElections, publishedResultsCount] = await Promise.all([
@@ -102,77 +106,139 @@ export default async function VotePage() {
     closesAt: closesAt.toISOString(),
   };
 
-  const homeowner = await prisma.homeowner.findUnique({
-    where: { id: homeownerId },
-    select: {
-      propertyId: true,
-      property: { select: { primaryVoterId: true, unit: true } },
+  const voters = await prisma.electionVoter.findMany({
+    where: {
+      electionId: votable.id,
+      OR: [{ homeownerId }, { proxyId: homeownerId }],
     },
-  });
-  if (homeowner?.property.primaryVoterId !== homeownerId) {
-    return (
-      <div>
-        <AutoRefresh />
-        {quickLinks}
-        <div className="mx-auto max-w-lg rounded-2xl border border-line bg-surface p-6 text-center shadow-sm">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-soft">
-            <IconBallot width={21} height={21} className="text-purple" />
-          </div>
-          <h1 className="text-lg font-semibold text-ink">
-            Voting access is assigned to your property&apos;s primary voter
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-            An administrator must designate the resident authorized to vote for{' '}
-            {homeowner?.property.unit ?? 'your property'}. Contact your community administrator if
-            this should be you.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const myVotes = await prisma.vote.findMany({
-    where: { propertyId: homeowner.propertyId, position: { electionId: votable.id } },
     include: {
-      position: true,
-      candidate: { include: { homeowner: { select: { avatarUrl: true } } } },
+      homeowner: { select: { id: true, fullName: true, propertyId: true } },
+      proxy: { select: { id: true, fullName: true } },
+      castBy: { select: { fullName: true } },
+      ballot: {
+        include: {
+          votes: {
+            include: {
+              position: true,
+              candidate: { include: { homeowner: { select: { avatarUrl: true } } } },
+            },
+            orderBy: [{ castAt: 'asc' }, { id: 'asc' }],
+          },
+        },
+      },
     },
-    orderBy: [{ castAt: 'asc' }, { id: 'asc' }],
+    orderBy: { homeowner: { fullName: 'asc' } },
   });
-  const propertyVotes = myVotes.map((vote) => ({
-    ...vote,
-    candidate: {
-      ...vote.candidate,
-      homeownerAvatarUrl: vote.candidate.homeowner?.avatarUrl ?? null,
-    },
-  }));
-  const votedPositionIds = [...new Set(propertyVotes.map((vote) => vote.positionId))];
 
-  const allVoted =
-    votable.positions.length > 0 && votedPositionIds.length >= votable.positions.length;
-
-  if (allVoted) {
-    return (
-      <div>
-        <AutoRefresh />
-        {quickLinks}
-        <BallotSummary electionTitle={votable.title} closesAt={closesAt} votes={propertyVotes} />
-      </div>
-    );
-  }
+  const requestedVoterId = Number(searchParams?.voterId);
+  const selectedVoter =
+    voters.find((voter) => voter.id === requestedVoterId) ??
+    (voters.length === 1 ? voters[0] : null);
+  const activeAccounts =
+    selectedVoter?.homeownerId === homeownerId
+      ? await prisma.homeowner.findMany({
+          where: {
+            id: { not: homeownerId },
+            passwordHash: { not: null },
+            propertyMemberships: {
+              some: { propertyId: selectedVoter.homeowner.propertyId },
+            },
+          },
+          select: { id: true, fullName: true },
+          orderBy: { fullName: 'asc' },
+        })
+      : [];
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-shrink-0">
-        <AutoRefresh />
-        {quickLinks}
-      </div>
-      <div className="min-h-0 flex-1">
-        <VoteWizard
-          election={electionWithCandidateAvatars}
-          votedPositionIds={votedPositionIds}
-        />
-      </div>
+    <div>
+      <AutoRefresh />
+      {quickLinks}
+      {!selectedVoter ? (
+        <div className="mx-auto max-w-lg rounded-2xl border border-line bg-surface p-6 shadow-sm">
+          <h1 className="text-lg font-semibold text-ink">
+            {voters.length > 1 ? 'Choose a voting entitlement' : 'No voting entitlement'}
+          </h1>
+          {voters.length > 1 ? (
+            <div className="mt-4 space-y-2">
+              {voters.map((voter) => (
+                <Link
+                  key={voter.id}
+                  href={`/vote?voterId=${voter.id}`}
+                  className="flex items-center justify-between rounded-xl border border-line p-3 text-sm hover:bg-surface-muted"
+                >
+                  <span>{voter.homeowner.fullName}</span>
+                  <span className="text-xs text-ink-muted">
+                    {voter.ballot
+                      ? 'Already voted'
+                      : voter.proxyId === homeownerId
+                        ? 'Proxy ballot'
+                        : voter.proxyId
+                          ? 'Proxy assigned'
+                          : 'Ready to vote'}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              You are not listed as a primary owner or an authorized proxy for this election.
+              Contact your community administrator if you believe this is incorrect.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="mx-auto max-w-2xl">
+          {voters.length > 1 && (
+            <Link href="/vote" className="mb-3 inline-block text-xs font-medium text-brand-strong">
+              ← Choose another voter
+            </Link>
+          )}
+          {selectedVoter.ballot ? (
+            selectedVoter.ballot.votes.length > 0 ? (
+              <BallotSummary
+                electionTitle={votable.title}
+                closesAt={closesAt}
+                votes={selectedVoter.ballot.votes.map((vote) => ({
+                  ...vote,
+                  castAt: selectedVoter.castAt!,
+                  candidate: {
+                    ...vote.candidate,
+                    homeownerAvatarUrl: vote.candidate.homeowner?.avatarUrl ?? null,
+                  },
+                }))}
+              />
+            ) : (
+              <BallotComplete alreadyDone />
+            )
+          ) : (
+            <>
+              <div className="mb-4 rounded-2xl border border-line bg-surface p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+                  {selectedVoter.homeownerId === homeownerId
+                    ? 'Your voting entitlement'
+                    : 'Voting on behalf of'}
+                </p>
+                <p className="mt-1 text-base font-semibold text-ink">
+                  {selectedVoter.homeowner.fullName}
+                </p>
+              </div>
+              <VotingEntitlementPanel
+                election={electionWithCandidateAvatars}
+                voterId={selectedVoter.id}
+                activeAccounts={activeAccounts}
+                currentProxyId={selectedVoter.proxyId}
+                canAssignProxy={selectedVoter.homeownerId === homeownerId}
+                proxyName={selectedVoter.proxy?.fullName ?? null}
+              />
+            </>
+          )}
+          {selectedVoter.ballot && selectedVoter.castBy && (
+            <p className="mt-3 text-center text-xs text-ink-muted">
+              Ballot submitted by {selectedVoter.castBy.fullName}.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

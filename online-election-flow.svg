@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1660" viewBox="0 0 1200 1660" role="img" aria-labelledby="title description">
+  <title id="title">Online election flow</title>
+  <desc id="description">Flowchart showing how an administrator prepares an election, how a primary owner or authorized proxy submits one ballot, and how the app prevents duplicate voting before results are tallied.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#64748b"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #172033; }
+      .title { font-size: 34px; font-weight: 700; }
+      .subtitle { font-size: 17px; fill: #526078; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .admin { fill: #eef2ff; stroke: #818cf8; }
+      .system { fill: #ecfdf5; stroke: #34d399; }
+      .voting { fill: #eff6ff; stroke: #60a5fa; }
+      .decision { fill: #fff7ed; stroke: #fb923c; stroke-width: 2; }
+      .end { fill: #f0fdf4; stroke: #4ade80; }
+      .error { fill: #fff1f2; stroke: #fb7185; }
+      .label { font-size: 19px; font-weight: 600; text-anchor: middle; }
+      .small { font-size: 16px; font-weight: 400; text-anchor: middle; fill: #526078; }
+      .edge { fill: none; stroke: #64748b; stroke-width: 3; marker-end: url(#arrow); }
+      .edge-label { font-size: 15px; font-weight: 600; fill: #526078; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="1660" fill="#f8fafc"/>
+  <text x="600" y="58" class="title" text-anchor="middle">Online Election: From Setup to Results</text>
+  <text x="600" y="91" class="subtitle" text-anchor="middle">One ballot belongs to each eligible primary owner for each election</text>
+
+  <rect x="360" y="130" width="480" height="84" rx="18" class="box admin"/>
+  <text x="600" y="164" class="label">
+    <tspan x="600">Admin links owners to properties</tspan>
+    <tspan x="600" dy="25" class="small">and designates one primary owner per property</tspan>
+  </text>
+
+  <path d="M600 214 V252" class="edge"/>
+  <rect x="360" y="254" width="480" height="78" rx="18" class="box admin"/>
+  <text x="600" y="301" class="label">Admin prepares election and candidates</text>
+
+  <path d="M600 332 V370" class="edge"/>
+  <rect x="360" y="372" width="480" height="78" rx="18" class="box admin"/>
+  <text x="600" y="419" class="label">Admin opens voting</text>
+
+  <path d="M600 450 V488" class="edge"/>
+  <rect x="330" y="490" width="540" height="94" rx="18" class="box system"/>
+  <text x="600" y="527" class="label">
+    <tspan x="600">App creates the election's voter list</tspan>
+    <tspan x="600" dy="27" class="small">Each activated primary owner appears once,</tspan>
+    <tspan x="600" dy="22" class="small">even if linked to multiple properties</tspan>
+  </text>
+
+  <path d="M600 584 V622" class="edge"/>
+  <polygon points="600,624 800,704 600,784 400,704" class="decision"/>
+  <text x="600" y="697" class="label">
+    <tspan x="600">Who submits this</tspan>
+    <tspan x="600" dy="25">owner's ballot?</tspan>
+  </text>
+
+  <path d="M400 704 H220 V824" class="edge"/>
+  <text x="260" y="689" class="edge-label">Primary owner</text>
+  <rect x="65" y="826" width="310" height="86" rx="18" class="box voting"/>
+  <text x="220" y="861" class="label">
+    <tspan x="220">Owner opens</tspan>
+    <tspan x="220" dy="25">their ballot</tspan>
+  </text>
+
+  <path d="M800 704 H980 V824" class="edge"/>
+  <text x="885" y="689" class="edge-label">Proxy</text>
+  <rect x="825" y="826" width="310" height="86" rx="18" class="box voting"/>
+  <text x="980" y="858" class="label">
+    <tspan x="980">Owner assigns an</tspan>
+    <tspan x="980" dy="25">active account as proxy</tspan>
+  </text>
+
+  <path d="M980 912 V946" class="edge"/>
+  <rect x="825" y="948" width="310" height="86" rx="18" class="box voting"/>
+  <text x="980" y="981" class="label">
+    <tspan x="980">Proxy signs in and opens</tspan>
+    <tspan x="980" dy="25">that owner's ballot</tspan>
+  </text>
+  <path d="M825 991 H600 V1071" class="edge"/>
+  <path d="M220 912 V1071 H600" class="edge"/>
+  <text x="663" y="974" class="edge-label">Proxy submits the same owner's vote, not an extra vote</text>
+
+  <rect x="360" y="1073" width="480" height="82" rx="18" class="box voting"/>
+  <text x="600" y="1107" class="label">
+    <tspan x="600">Select candidates for each position</tspan>
+    <tspan x="600" dy="25" class="small">Then review and submit the ballot</tspan>
+  </text>
+
+  <path d="M600 1155 V1193" class="edge"/>
+  <polygon points="600,1195 845,1284 600,1373 355,1284" class="decision"/>
+  <text x="600" y="1267" class="label">
+    <tspan x="600">Eligible, authorized, voting open,</tspan>
+    <tspan x="600" dy="25">and ballot not already used?</tspan>
+  </text>
+
+  <path d="M355 1284 H205 V1415" class="edge"/>
+  <text x="245" y="1269" class="edge-label">No</text>
+  <rect x="50" y="1417" width="310" height="88" rx="18" class="box error"/>
+  <text x="205" y="1452" class="label">
+    <tspan x="205">Submission rejected</tspan>
+    <tspan x="205" dy="25" class="small">App explains why</tspan>
+  </text>
+
+  <path d="M845 1284 H995 V1415" class="edge"/>
+  <text x="950" y="1269" class="edge-label">Yes</text>
+  <rect x="840" y="1417" width="310" height="88" rx="18" class="box system"/>
+  <text x="995" y="1452" class="label">
+    <tspan x="995">Ballot is recorded</tspan>
+    <tspan x="995" dy="25" class="small">Owner's one vote is now used</tspan>
+  </text>
+
+  <path d="M995 1505 V1534 H600 V1555" class="edge"/>
+  <rect x="360" y="1557" width="480" height="78" rx="18" class="box end"/>
+  <text x="600" y="1588" class="label">
+    <tspan x="600">Voting closes; app tallies votes</tspan>
+    <tspan x="600" dy="25" class="small">and reports turnout</tspan>
+  </text>
+</svg>

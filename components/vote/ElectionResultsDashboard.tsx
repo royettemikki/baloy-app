@@ -20,6 +20,7 @@ type PositionResult = {
   title: string;
   seats: number;
   totalVotes: number;
+  hasUnresolvedTie: boolean;
   candidates: CandidateResult[];
 };
 
@@ -198,7 +199,7 @@ export default function ElectionResultsDashboard({
             </div>
           </div>
           <p className="relative mt-3 text-[10px] leading-relaxed text-white/75">
-            Participation is estimated by comparing ballots submitted with active resident accounts.
+            Turnout is calculated from ballots submitted and the eligible primary-owner roll.
             Candidate selections can exceed ballots when a position has multiple seats.
           </p>
         </div>
@@ -268,7 +269,9 @@ export default function ElectionResultsDashboard({
               {position.seats} seat{position.seats === 1 ? '' : 's'} available
               {electedCount > 0
                 ? ` · ${electedCount} candidate${electedCount === 1 ? '' : 's'} elected`
-                : ' · no candidate elected'}
+                : position.hasUnresolvedTie
+                  ? ' · tie for the final seat'
+                  : ' · no candidate elected'}
             </p>
           </div>
           <div className="rounded-xl bg-surface-muted px-3 py-2 text-right">
@@ -284,6 +287,15 @@ export default function ElectionResultsDashboard({
             <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-warning" />
             <p className="text-[11px] leading-relaxed text-ink-soft">
               No votes were recorded for this position, so no candidate was elected.
+            </p>
+          </div>
+        )}
+        {position.hasUnresolvedTie && (
+          <div className="border-warning/20 bg-warning-soft/50 mx-4 mt-4 flex gap-2.5 rounded-xl border px-3.5 py-3 sm:mx-5">
+            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-warning" />
+            <p className="text-[11px] leading-relaxed text-ink-soft">
+              Candidates are tied for the final available seat. No tied candidate is marked elected
+              until the tie is resolved.
             </p>
           </div>
         )}
@@ -387,8 +399,7 @@ export default function ElectionResultsDashboard({
       <p className="px-2 text-center text-[10px] leading-relaxed text-ink-muted">
         A ballot is one submitted voting form. Candidate selections are votes for individual
         candidates; voters may select more than one candidate when a position has multiple seats.
-        Turnout is an estimate based on {formatCount(election.eligibleVoters)} active resident
-        accounts.
+        Turnout is based on {formatCount(election.eligibleVoters)} eligible primary owners.
       </p>
     </div>
   );
@@ -426,7 +437,7 @@ function LiveTurnoutCard({ activeElection }: { activeElection: ActiveElection })
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-ink-muted">Estimated participation</p>
+            <p className="text-[10px] text-ink-muted">Turnout</p>
             <p className="mt-0.5 text-lg font-semibold tabular-nums text-brand-strong">
               {turnout.toFixed(1)}%
             </p>
@@ -446,7 +457,7 @@ function LiveTurnoutCard({ activeElection }: { activeElection: ActiveElection })
           />
         </div>
         <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-ink-muted">
-          <span>of {formatCount(activeElection.eligibleVoters)} active resident accounts</span>
+          <span>of {formatCount(activeElection.eligibleVoters)} eligible primary owners</span>
           <span className="shrink-0">
             Closes {formatDate(activeElection.closesAt, { month: 'short' })}
           </span>

@@ -9,6 +9,32 @@ import { getSmsProvider } from '@/lib/sms';
 import { formatPhilippineNumber } from '@/lib/sms/formatPhilippineNumber';
 import { runLateFeeCheck } from '@/lib/lateFees';
 import bcrypt from 'bcryptjs';
+import { FEATURE_VISIBILITY } from '@/lib/featureVisibilityConfig';
+import type { FeatureAudience, FeatureKey } from '@/lib/featureVisibilityConfig';
+
+const ELECTION_REVALIDATE_PATHS = [
+  '/admin/elections',
+  '/vote',
+  '/results',
+  '/file-candidacy',
+  '/board',
+  '/board-approvals',
+  '/expense-requests',
+  '/home',
+] as const;
+
+async function clearElectionRecords() {
+  await prisma.$transaction([
+    prisma.vote.deleteMany({}),
+    prisma.propertyBallot.deleteMany({}),
+    prisma.expenseRequest.deleteMany({}),
+    prisma.candidacyFiling.deleteMany({}),
+    prisma.candidate.deleteMany({}),
+    prisma.position.deleteMany({}),
+    prisma.slate.deleteMany({}),
+    prisma.election.deleteMany({}),
+  ]);
+}
 
 export async function runLateFeeCheckNowAction() {
   const admin = await requireDevAdmin();
@@ -27,82 +53,48 @@ async function requireDevAdmin() {
   return getAdminOrNull();
 }
 
-export async function resetElectionSeedAction() {
+export async function resetElectionDataAction() {
   const admin = await requireDevAdmin();
   if (!admin) return { error: 'This tool is only available in local development.' };
 
-  await prisma.vote.deleteMany({});
-  await prisma.expenseRequest.deleteMany({});
-  await prisma.candidacyFiling.deleteMany({});
-  await prisma.candidate.deleteMany({});
-  await prisma.position.deleteMany({});
-  await prisma.slate.deleteMany({});
-  await prisma.election.deleteMany({});
+  await clearElectionRecords();
+  revalidateElectionPaths();
+  return { success: true };
+}
 
-  const election = await prisma.election.create({
-    data: {
-      title: '2026 Board Election',
-      filingDurationHours: 168,
-      votingDurationHours: 120,
-      slates: {
-        create: [
-          { name: 'Unity Team', color: '#0F6E56' },
-          { name: 'Kapit-Bisig Slate', color: '#B45309' },
-        ],
-      },
+function revalidateElectionPaths() {
+  ELECTION_REVALIDATE_PATHS.forEach((path) => revalidatePath(path));
+}
+
+export async function updateFeatureVisibilityAction(
+  key: FeatureKey,
+  audience: FeatureAudience,
+  enabled: boolean,
+) {
+  const admin = await requireDevAdmin();
+  if (!admin) return { error: 'This tool is only available in local development.' };
+  if (
+    typeof enabled !== 'boolean' ||
+    (audience !== 'admin' && audience !== 'resident') ||
+    typeof key !== 'string'
+  ) {
+    return { error: 'Invalid feature visibility setting.' };
+  }
+
+  const feature = FEATURE_VISIBILITY.find((item) => item.key === key);
+  if (!feature?.[audience]) return { error: 'Unknown feature or audience.' };
+
+  await prisma.appFeatureVisibility.upsert({
+    where: { key },
+    create: {
+      key,
+      adminEnabled: audience === 'admin' ? enabled : true,
+      residentEnabled: audience === 'resident' ? enabled : true,
     },
+    update: audience === 'admin' ? { adminEnabled: enabled } : { residentEnabled: enabled },
   });
 
-  const slateRows = await prisma.slate.findMany({ where: { electionId: election.id } });
-  const unity = slateRows.find((s) => s.name === 'Unity Team')!;
-  const kapitBisig = slateRows.find((s) => s.name === 'Kapit-Bisig Slate')!;
-
-  await prisma.position.create({
-    data: {
-      electionId: election.id,
-      title: 'President',
-      seats: 1,
-      candidates: {
-        create: [
-          {
-            name: 'Renata Osei',
-            roleDescription: 'Unit 6C',
-            ballotNumber: 1,
-            isIncumbent: true,
-            slateId: unity.id,
-          },
-          {
-            name: 'Marcus Ibarra',
-            roleDescription: 'Unit 21A',
-            ballotNumber: 2,
-            slateId: kapitBisig.id,
-          },
-        ],
-      },
-    },
-  });
-
-  await prisma.position.create({
-    data: {
-      electionId: election.id,
-      title: 'Vice President',
-      seats: 1,
-      candidates: {
-        create: [
-          {
-            name: 'Priya Chandran',
-            roleDescription: 'Unit 9D',
-            ballotNumber: 1,
-            slateId: unity.id,
-          },
-          { name: 'Owen Fletcher', roleDescription: 'Unit 3B', ballotNumber: 2 },
-        ],
-      },
-    },
-  });
-
-  revalidatePath('/vote');
-  revalidatePath('/home');
+  revalidatePath('/');
   return { success: true };
 }
 

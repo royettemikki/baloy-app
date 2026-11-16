@@ -33,9 +33,9 @@ function ResidentBadges({ homeowner }: { homeowner: Resident }) {
           Admin
         </span>
       )}
-      {homeowner.isPrimaryVoter && (
+      {homeowner.isPrimaryOwner && (
         <span className="rounded-pill bg-purple-soft px-2.5 py-1 text-[11px] font-medium text-purple">
-          Primary voter
+          Primary owner
         </span>
       )}
       {homeowner.propertyNeedsReview && (
@@ -50,9 +50,11 @@ function ResidentBadges({ homeowner }: { homeowner: Resident }) {
 function ResidentMobileCard({
   homeowner,
   currentAdminId,
+  propertyOptions,
 }: {
   homeowner: Resident;
   currentAdminId: string;
+  propertyOptions: { id: string; unit: string }[];
 }) {
   const initials = homeowner.fullName
     .split(' ')
@@ -73,19 +75,31 @@ function ResidentMobileCard({
             <p className="truncate text-xs text-ink-muted">{homeowner.email}</p>
           </div>
         </div>
-        <ResidentActionsMenu homeowner={homeowner} currentAdminId={currentAdminId} />
+        <ResidentActionsMenu
+          homeowner={homeowner}
+          currentAdminId={currentAdminId}
+          propertyOptions={propertyOptions}
+        />
       </div>
 
       <ResidentBadges homeowner={homeowner} />
 
       <div className="mt-3 rounded-xl bg-surface-muted px-3 py-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Monthly dues</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+          Monthly dues
+        </p>
         <p className="mt-0.5 text-sm font-semibold text-ink">{monthlyDuesLabel(homeowner)}</p>
-        <p className="text-[10px] text-ink-muted">{homeowner.duesRateOverride ? 'Custom property rate' : 'Community default'}</p>
-        {homeowner.monthlyDuesMode === 'PerArea' && homeowner.lotAreaSqm && <p className="text-[11px] text-ink-muted">{homeowner.lotAreaSqm} m² × ₱{homeowner.monthlyDuesRate.toFixed(2)} / m²</p>}
+        <p className="text-[10px] text-ink-muted">
+          {homeowner.duesRateOverride ? 'Custom property rate' : 'Community default'}
+        </p>
+        {homeowner.monthlyDuesMode === 'PerArea' && homeowner.lotAreaSqm && (
+          <p className="text-[11px] text-ink-muted">
+            {homeowner.lotAreaSqm} m² × ₱{homeowner.monthlyDuesRate.toFixed(2)} / m²
+          </p>
+        )}
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-line/50 pt-3">
+      <div className="border-line/50 mt-3 flex items-center justify-between border-t pt-3">
         <p className="text-xs text-ink-soft">Unit {homeowner.unit}</p>
         <p className="text-xs text-ink-muted">
           {homeowner.invitedAt ? formatShortDate(homeowner.invitedAt) : '—'}
@@ -93,7 +107,7 @@ function ResidentMobileCard({
       </div>
 
       {!homeowner.passwordHash && homeowner.inviteToken && (
-        <div className="mt-2.5 border-t border-line/50 pt-2.5">
+        <div className="border-line/50 mt-2.5 border-t pt-2.5">
           <CopyInviteLink token={homeowner.inviteToken} />
         </div>
       )}
@@ -104,9 +118,11 @@ function ResidentMobileCard({
 export default function ResidentsTable({
   homeowners,
   currentAdminId,
+  propertyOptions,
 }: {
   homeowners: Resident[];
   currentAdminId: string;
+  propertyOptions: { id: string; unit: string }[];
 }) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pending'>('All');
@@ -122,11 +138,18 @@ export default function ResidentsTable({
 
   const activeCount = homeowners.filter((h) => h.passwordHash).length;
   const pendingCount = homeowners.length - activeCount;
-  const duesUnconfiguredCount = new Set(homeowners.filter((h) =>
-    h.passwordHash && (h.monthlyDuesRate <= 0 || (h.monthlyDuesMode === 'PerArea' && !h.lotAreaSqm)),
-  ).map((homeowner) => homeowner.propertyId)).size;
-  const filtered = searched.filter((h) =>
-    statusFilter === 'All' || (statusFilter === 'Active' ? !!h.passwordHash : !h.passwordHash),
+  const duesUnconfiguredCount = new Set(
+    homeowners
+      .filter(
+        (h) =>
+          h.passwordHash &&
+          (h.monthlyDuesRate <= 0 || (h.monthlyDuesMode === 'PerArea' && !h.lotAreaSqm)),
+      )
+      .map((homeowner) => homeowner.propertyId),
+  ).size;
+  const filtered = searched.filter(
+    (h) =>
+      statusFilter === 'All' || (statusFilter === 'Active' ? !!h.passwordHash : !h.passwordHash),
   );
 
   const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -139,44 +162,66 @@ export default function ResidentsTable({
           <p className="text-xs font-medium text-ink-muted">Total residents</p>
           <div className="mt-1 flex items-baseline gap-2.5">
             <p className="text-2xl font-semibold tracking-tight text-ink">{homeowners.length}</p>
-            {newThisWeek > 0 && <span className="text-[11px] font-medium text-brand-strong">+{newThisWeek} this week</span>}
+            {newThisWeek > 0 && (
+              <span className="text-[11px] font-medium text-brand-strong">
+                +{newThisWeek} this week
+              </span>
+            )}
           </div>
         </div>
-        <div className="border-t border-line/50 p-4 sm:border-l sm:border-t-0 sm:p-5">
-          <p className="flex items-center gap-2 text-xs font-medium text-ink-muted"><span className="h-2 w-2 rounded-full bg-brand" />Active accounts</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-brand-strong">{activeCount}</p>
+        <div className="border-line/50 border-t p-4 sm:border-l sm:border-t-0 sm:p-5">
+          <p className="flex items-center gap-2 text-xs font-medium text-ink-muted">
+            <span className="h-2 w-2 rounded-full bg-brand" />
+            Active accounts
+          </p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-brand-strong">
+            {activeCount}
+          </p>
         </div>
-        <div className="border-t border-line/50 p-4 sm:border-l sm:border-t-0 sm:p-5">
-          <p className="flex items-center gap-2 text-xs font-medium text-ink-muted"><span className="h-2 w-2 rounded-full bg-warning" />Pending invites</p>
+        <div className="border-line/50 border-t p-4 sm:border-l sm:border-t-0 sm:p-5">
+          <p className="flex items-center gap-2 text-xs font-medium text-ink-muted">
+            <span className="h-2 w-2 rounded-full bg-warning" />
+            Pending invites
+          </p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-warning">{pendingCount}</p>
         </div>
-        <div className="border-t border-line/50 p-4 sm:border-l sm:border-t-0 sm:p-5">
-          <p className="flex items-center gap-2 text-xs font-medium text-ink-muted"><span className="h-2 w-2 rounded-full bg-danger" />Dues not set</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-danger">{duesUnconfiguredCount}</p>
+        <div className="border-line/50 border-t p-4 sm:border-l sm:border-t-0 sm:p-5">
+          <p className="flex items-center gap-2 text-xs font-medium text-ink-muted">
+            <span className="h-2 w-2 rounded-full bg-danger" />
+            Dues not set
+          </p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-danger">
+            {duesUnconfiguredCount}
+          </p>
         </div>
       </div>
 
       <div className="mb-4 flex flex-col gap-3 rounded-2xl bg-surface p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
         <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search by name, email, or unit…"
-        aria-label="Search residents by name, email, or unit"
-        className="w-full rounded-xl bg-surface-muted px-4 py-2.5 text-sm outline-none transition placeholder:text-ink-muted focus:ring-2 focus:ring-brand/30 sm:order-2 sm:max-w-xs"
-      />
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by name, email, or unit…"
+          aria-label="Search residents by name, email, or unit"
+          className="focus:ring-brand/30 w-full rounded-xl bg-surface-muted px-4 py-2.5 text-sm outline-none transition placeholder:text-ink-muted focus:ring-2 sm:order-2 sm:max-w-xs"
+        />
 
         <div className="flex flex-wrap gap-1.5 sm:order-1">
           {(['All', 'Active', 'Pending'] as const).map((filter) => (
-          <button
-            key={filter}
-            type="button"
-            onClick={() => setStatusFilter(filter)}
-            aria-pressed={statusFilter === filter}
-            className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${statusFilter === filter ? 'bg-brand text-on-brand' : 'bg-surface-muted text-ink-soft hover:bg-surface-hover'}`}
-          >
-            {filter}{filter === 'All' ? ` (${homeowners.length})` : filter === 'Active' ? ` (${activeCount})` : ` (${pendingCount})`}
-          </button>
-        ))}
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setStatusFilter(filter)}
+              aria-pressed={statusFilter === filter}
+              className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${statusFilter === filter ? 'bg-brand text-on-brand' : 'bg-surface-muted text-ink-soft hover:bg-surface-hover'}`}
+            >
+              {filter}
+              {filter === 'All'
+                ? ` (${homeowners.length})`
+                : filter === 'Active'
+                  ? ` (${activeCount})`
+                  : ` (${pendingCount})`}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -186,11 +231,26 @@ export default function ResidentsTable({
           <div className="rounded-2xl bg-surface p-8 text-center shadow-sm">
             <p className="text-sm font-semibold text-ink">No residents found</p>
             <p className="mt-1 text-xs text-ink-muted">Try another search or status filter.</p>
-            {(query || statusFilter !== 'All') && <button onClick={() => { setQuery(''); setStatusFilter('All'); }} className="mt-4 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-on-brand">Clear filters</button>}
+            {(query || statusFilter !== 'All') && (
+              <button
+                onClick={() => {
+                  setQuery('');
+                  setStatusFilter('All');
+                }}
+                className="mt-4 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-on-brand"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           filtered.map((h) => (
-            <ResidentMobileCard key={h.id} homeowner={h} currentAdminId={currentAdminId} />
+            <ResidentMobileCard
+              key={h.id}
+              homeowner={h}
+              currentAdminId={currentAdminId}
+              propertyOptions={propertyOptions}
+            />
           ))
         )}
       </div>
@@ -199,7 +259,7 @@ export default function ResidentsTable({
       <div className="hidden overflow-hidden rounded-2xl bg-surface shadow-sm sm:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line/50 bg-surface text-left text-[11px] uppercase tracking-[0.1em] text-ink-muted">
+            <tr className="border-line/50 border-b bg-surface text-left text-[11px] uppercase tracking-[0.1em] text-ink-muted">
               <th className="px-5 py-3.5 font-semibold">Resident</th>
               <th className="px-5 py-3.5 font-semibold">Unit</th>
               <th className="px-5 py-3.5 font-semibold">Monthly dues</th>
@@ -208,7 +268,7 @@ export default function ResidentsTable({
               <th className="px-5 py-3.5 text-right font-semibold">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-line/50">
+          <tbody className="divide-line/50 divide-y">
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-8 text-center text-ink-muted">
@@ -238,9 +298,19 @@ export default function ResidentsTable({
                   </td>
                   <td className="px-5 py-3.5 text-ink-soft">{h.unit}</td>
                   <td className="px-5 py-3.5">
-                    <p className={`text-sm font-medium ${h.monthlyDuesRate > 0 ? 'text-ink' : 'text-warning'}`}>{monthlyDuesLabel(h)}</p>
-                    {h.monthlyDuesMode === 'PerArea' && h.lotAreaSqm && <p className="text-xs text-ink-muted">{h.lotAreaSqm} m² × ₱{h.monthlyDuesRate.toFixed(2)}</p>}
-                    <p className="text-[10px] text-ink-muted">{h.duesRateOverride ? 'Custom property rate' : 'Community default'}</p>
+                    <p
+                      className={`text-sm font-medium ${h.monthlyDuesRate > 0 ? 'text-ink' : 'text-warning'}`}
+                    >
+                      {monthlyDuesLabel(h)}
+                    </p>
+                    {h.monthlyDuesMode === 'PerArea' && h.lotAreaSqm && (
+                      <p className="text-xs text-ink-muted">
+                        {h.lotAreaSqm} m² × ₱{h.monthlyDuesRate.toFixed(2)}
+                      </p>
+                    )}
+                    <p className="text-[10px] text-ink-muted">
+                      {h.duesRateOverride ? 'Custom property rate' : 'Community default'}
+                    </p>
                   </td>
                   <td className="px-5 py-3.5">
                     <ResidentBadges homeowner={h} />
@@ -249,7 +319,11 @@ export default function ResidentsTable({
                     {h.invitedAt ? formatShortDate(h.invitedAt) : '—'}
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    <ResidentActionsMenu homeowner={h} currentAdminId={currentAdminId} />
+                    <ResidentActionsMenu
+                      homeowner={h}
+                      currentAdminId={currentAdminId}
+                      propertyOptions={propertyOptions}
+                    />
                   </td>
                 </tr>
               );

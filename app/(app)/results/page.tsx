@@ -4,17 +4,19 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import AutoRefresh from '@/components/AutoRefresh';
 import ElectionResultsDashboard from '@/components/vote/ElectionResultsDashboard';
+import { getWinningCandidateIds } from '@/lib/electionWinners';
 
 export default async function ResultsPage() {
   const session = await getServerSession(authOptions);
   if (!(session?.user as any)?.id) redirect('/login');
 
   const now = new Date();
-  const [closedElections, liveElection, eligibleVoters] = await Promise.all([
+  const [closedElections, liveElection, eligibleVoterProperties] = await Promise.all([
     prisma.election.findMany({
       where: { closesAt: { lt: now } },
       orderBy: { closesAt: 'desc' },
       include: {
+        voterRoll: { select: { id: true, castAt: true } },
         positions: {
           include: {
             candidates: {
@@ -31,22 +33,28 @@ export default async function ResultsPage() {
     prisma.election.findFirst({
       where: { votingOpensAt: { lte: now }, closesAt: { gt: now } },
       orderBy: { opensAt: 'desc' },
-      select: {
-        title: true,
-        closesAt: true,
-        positions: { select: { votes: { select: { homeownerId: true } } } },
-      },
+      select: { title: true, closesAt: true, voterRoll: { select: { castAt: true } } },
     }),
-    prisma.homeowner.count({ where: { passwordHash: { not: null } } }),
+    prisma.property.findMany({
+      where: {
+        primaryVoterId: { not: null },
+        primaryVoter: { passwordHash: { not: null } },
+      },
+      select: { primaryVoterId: true },
+    }),
   ]);
 
-  const liveVotes = liveElection?.positions.flatMap((position) => position.votes) ?? [];
+  const eligibleVoters = new Set(
+    eligibleVoterProperties.flatMap(({ primaryVoterId }) =>
+      primaryVoterId ? [primaryVoterId] : [],
+    ),
+  ).size;
   const activeElection = liveElection?.closesAt
     ? {
         title: liveElection.title,
         closesAt: liveElection.closesAt.toISOString(),
-        ballotCount: new Set(liveVotes.map((vote) => vote.homeownerId)).size,
-        eligibleVoters,
+        ballotCount: liveElection.voterRoll.filter((voter) => voter.castAt !== null).length,
+        eligibleVoters: liveElection.voterRoll.length,
       }
     : null;
 
@@ -54,29 +62,44 @@ export default async function ResultsPage() {
     const allVotes = election.positions.flatMap((position) =>
       position.candidates.flatMap((candidate) => candidate.votes),
     );
-    const ballotCount = new Set(allVotes.map((vote) => vote.homeownerId)).size;
+    const ballotCount = election.voterRoll.length
+      ? election.voterRoll.filter((voter) => voter.castAt !== null).length
+      : new Set(allVotes.map((vote) => vote.homeownerId)).size;
     const positions = election.positions.map((position) => {
-      const totalVotes = position.candidates.reduce((total, candidate) => total + candidate.votes.length, 0);
+      const totalVotes = position.candidates.reduce(
+        (total, candidate) => total + candidate.votes.length,
+        0,
+      );
       const ranked = position.candidates
         .map((candidate) => ({
           id: candidate.id,
           name: candidate.name,
           photoUrl: candidate.photoUrl,
           homeownerAvatarUrl: candidate.homeowner?.avatarUrl ?? null,
-          slate: candidate.slate ? { name: candidate.slate.name, color: candidate.slate.color } : null,
+          slate: candidate.slate
+            ? { name: candidate.slate.name, color: candidate.slate.color }
+            : null,
           votes: candidate.votes.length,
         }))
         .sort((a, b) => b.votes - a.votes || a.id - b.id);
+      const winnerIds = new Set(getWinningCandidateIds(ranked, position.seats));
+      const cutoffVotes = ranked[position.seats - 1]?.votes;
+      const hasUnresolvedTie =
+        cutoffVotes !== undefined &&
+        cutoffVotes > 0 &&
+        ranked.filter((candidate) => candidate.votes === cutoffVotes).length >
+          position.seats - ranked.filter((candidate) => candidate.votes > cutoffVotes).length;
 
       return {
         id: position.id,
         title: position.title,
         seats: position.seats,
         totalVotes,
-        candidates: ranked.map((candidate, index) => ({
+        hasUnresolvedTie,
+        candidates: ranked.map((candidate) => ({
           ...candidate,
           share: totalVotes > 0 ? (candidate.votes / totalVotes) * 100 : 0,
-          isWinner: candidate.votes > 0 && index < position.seats,
+          isWinner: winnerIds.has(candidate.id),
         })),
       };
     });
@@ -87,7 +110,7 @@ export default async function ResultsPage() {
       closesAt: election.closesAt!.toISOString(),
       totalVotes: positions.reduce((total, position) => total + position.totalVotes, 0),
       ballotCount,
-      eligibleVoters,
+      eligibleVoters: election.voterRoll.length || eligibleVoters,
       positions,
     };
   });

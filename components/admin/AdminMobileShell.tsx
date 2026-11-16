@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import AdminSidebar from './AdminSidebar';
 import AdminHeaderSlot from './AdminHeaderSlot';
+import type { FeatureKey } from '@/lib/featureVisibilityConfig';
 
 type Counts = {
   pendingInvites: number;
@@ -14,11 +15,13 @@ type Counts = {
 export default function AdminMobileShell({
   fullName,
   isDev,
+  enabledFeatures,
   counts,
   children,
 }: {
   fullName: string;
   isDev: boolean;
+  enabledFeatures: FeatureKey[];
   counts: Counts;
   children: React.ReactNode;
 }) {
@@ -29,6 +32,7 @@ export default function AdminMobileShell({
     <div className={`min-h-screen ${isDashboard ? 'dashboard-bg' : 'bg-surface-muted'}`}>
       <AdminSidebar
         isDev={isDev}
+        enabledFeatures={enabledFeatures}
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
         counts={counts}

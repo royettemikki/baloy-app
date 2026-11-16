@@ -1,8 +1,10 @@
 export type Resident = {
   id: string;
   propertyId: string;
+  propertyMembershipIds: string[];
+  primaryPropertyIds: string[];
   propertyNeedsReview: boolean;
-  isPrimaryVoter: boolean;
+  isPrimaryOwner: boolean;
   fullName: string;
   email: string;
   unit: string;

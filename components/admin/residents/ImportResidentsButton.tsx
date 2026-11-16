@@ -217,7 +217,8 @@ export default function ImportResidentsButton({
               </p>
               <p className="mt-2 text-xs leading-relaxed text-ink-soft">
                 Residents with the same unit are linked to one property and share its dues history.
-                Choose the primary voter from the resident actions after importing.
+                Link each property member and choose its primary owner from the resident actions
+                after importing.
               </p>
               <button
                 type="button"
