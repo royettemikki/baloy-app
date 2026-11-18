@@ -5,6 +5,7 @@ import { put } from '@vercel/blob';
 import { prisma } from '@/lib/prisma';
 import { getAdminOrNull } from '@/lib/adminAuth';
 import { AnnouncementTag } from '@/constants/announcementTags';
+import { isFeatureEnabled } from '@/lib/featureVisibility';
 
 function revalidateResidentPages() {
   revalidatePath('/notices');
@@ -32,6 +33,9 @@ function parseDateField(value: FormDataEntryValue | null): Date | null {
 export async function createAnnouncementAction(formData: FormData) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('announcements', 'admin'))) {
+    return { error: 'Announcement management is currently unavailable.' };
+  }
 
   const { url: imageUrl, error: imageError } = await uploadImageIfPresent(formData);
   if (imageError) return { error: imageError };
@@ -57,6 +61,9 @@ export async function updateAnnouncementAction(id: number, formData: FormData) {
   const admin = await getAdminOrNull();
   if (!admin) {
     return { error: 'You do not have permission to do this.' };
+  }
+  if (!(await isFeatureEnabled('announcements', 'admin'))) {
+    return { error: 'Announcement management is currently unavailable.' };
   }
 
   const { url: newImageUrl, error: imageError } = await uploadImageIfPresent(formData);
@@ -93,6 +100,9 @@ export async function updateAnnouncementAction(id: number, formData: FormData) {
 export async function deleteAnnouncementAction(id: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('announcements', 'admin'))) {
+    return { error: 'Announcement management is currently unavailable.' };
+  }
 
   await prisma.announcement.delete({ where: { id } });
   revalidateResidentPages();
@@ -102,6 +112,9 @@ export async function deleteAnnouncementAction(id: number) {
 export async function togglePinAction(id: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('announcements', 'admin'))) {
+    return { error: 'Announcement management is currently unavailable.' };
+  }
 
   const announcement = await prisma.announcement.findUnique({ where: { id } });
   if (!announcement) return { error: 'Announcement not found.' };

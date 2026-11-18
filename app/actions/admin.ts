@@ -9,6 +9,7 @@ import { getAdminOrNull } from '@/lib/adminAuth';
 import { MAX_RESIDENT_IMPORT_ROWS, prepareResidentImportRows } from '@/lib/residentImport';
 import type { ResidentImportInputRow } from '@/lib/residentImport';
 import { normalizePropertyUnit } from '@/lib/propertyUnit';
+import { isFeatureEnabled } from '@/lib/featureVisibility';
 
 function isResidentImportInput(rows: unknown): rows is ResidentImportInputRow[] {
   return (
@@ -23,7 +24,8 @@ function isResidentImportInput(rows: unknown): rows is ResidentImportInputRow[] 
         typeof row.fullName === 'string' &&
         typeof row.email === 'string' &&
         typeof row.unit === 'string' &&
-        typeof row.lotAreaSqm === 'string',
+        typeof row.lotAreaSqm === 'string' &&
+        typeof row.primaryOwner === 'string',
     )
   );
 }
@@ -70,6 +72,9 @@ async function getResidentImportPreview(rows: ResidentImportInputRow[]) {
 export async function previewResidentsImportAction(rows: ResidentImportInputRow[]) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
   if (!isResidentImportInput(rows)) {
     return {
       error: `Import between 1 and ${MAX_RESIDENT_IMPORT_ROWS} valid resident rows.`,
@@ -88,6 +93,9 @@ export async function previewResidentsImportAction(rows: ResidentImportInputRow[
 export async function importResidentsAction(rows: ResidentImportInputRow[]) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
   if (!isResidentImportInput(rows)) {
     return {
       error: `Import between 1 and ${MAX_RESIDENT_IMPORT_ROWS} valid resident rows.`,
@@ -98,6 +106,17 @@ export async function importResidentsAction(rows: ResidentImportInputRow[]) {
   const validRows = preparedRows.filter((row) => !row.error);
   if (validRows.length === 0) {
     return { error: 'There are no valid residents to import. Review the preview first.' };
+  }
+
+  const openElection = await prisma.election.findFirst({
+    where: {
+      votingOpensAt: { lte: new Date() },
+      OR: [{ closesAt: null }, { closesAt: { gt: new Date() } }],
+    },
+    select: { id: true },
+  });
+  if (openElection) {
+    return { error: 'Primary owners cannot be assigned while an election is open.' };
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -155,7 +174,7 @@ export async function importResidentsAction(rows: ResidentImportInputRow[]) {
 
     const importedHomeowners = await tx.homeowner.findMany({
       where: { email: { in: validRows.map((row) => row.email) } },
-      select: { id: true, propertyId: true },
+      select: { id: true, email: true, propertyId: true },
     });
     await tx.propertyMembership.createMany({
       data: importedHomeowners.map(({ id, propertyId }) => ({
@@ -164,6 +183,18 @@ export async function importResidentsAction(rows: ResidentImportInputRow[]) {
       })),
       skipDuplicates: true,
     });
+
+    const importedByEmail = new Map(
+      importedHomeowners.map((homeowner) => [homeowner.email.toLowerCase(), homeowner]),
+    );
+    for (const row of validRows.filter((item) => item.isPrimaryOwner)) {
+      const homeowner = importedByEmail.get(row.email.toLowerCase());
+      if (!homeowner) throw new Error('Unable to find the primary owner for an imported property.');
+      await tx.property.update({
+        where: { id: homeowner.propertyId },
+        data: { primaryVoterId: homeowner.id },
+      });
+    }
 
     return created;
   });
@@ -184,6 +215,9 @@ export async function createInviteAction(
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
 
   const normalizedName = fullName.trim();
   const trimmedUnitInput = unit.trim();
@@ -213,6 +247,7 @@ export async function createInviteAction(
       lotAreaSqm: true,
       duesRateOverride: true,
       monthlyDuesMode: true,
+      primaryVoterId: true,
     },
   });
   if (lotAreaSqm === null) {
@@ -240,6 +275,19 @@ export async function createInviteAction(
     return { error: 'Lot area does not match the existing property record.' };
   }
 
+  if (!existingProperty?.primaryVoterId) {
+    const openElection = await prisma.election.findFirst({
+      where: {
+        votingOpensAt: { lte: new Date() },
+        OR: [{ closesAt: null }, { closesAt: { gt: new Date() } }],
+      },
+      select: { id: true },
+    });
+    if (openElection) {
+      return { error: 'A primary owner cannot be assigned while an election is open.' };
+    }
+  }
+
   await prisma.$transaction(async (tx) => {
     const property = await tx.property.upsert({
       where: { normalizedUnit },
@@ -249,8 +297,9 @@ export async function createInviteAction(
         lotAreaSqm,
       },
       update: lotAreaSqm !== null && existingProperty?.lotAreaSqm === null ? { lotAreaSqm } : {},
+      select: { id: true, unit: true, primaryVoterId: true },
     });
-    await tx.homeowner.create({
+    const homeowner = await tx.homeowner.create({
       data: {
         email: normalizedEmail,
         fullName: normalizedName,
@@ -261,7 +310,14 @@ export async function createInviteAction(
         invitedAt: new Date(),
         propertyMemberships: { create: { propertyId: property.id } },
       },
+      select: { id: true },
     });
+    if (!property.primaryVoterId) {
+      await tx.property.updateMany({
+        where: { id: property.id, primaryVoterId: null },
+        data: { primaryVoterId: homeowner.id },
+      });
+    }
   });
 
   return { success: true, token: inviteToken };
@@ -273,6 +329,9 @@ export async function updateResidentAction(
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
 
   const fullName = data.fullName.trim();
   const email = data.email.trim().toLowerCase();
@@ -359,6 +418,9 @@ export async function updateResidentDuesAction(
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
   if (typeof data.override !== 'boolean')
     return { error: 'Choose whether this resident has a custom rate.' };
   if (typeof data.reviewedProperty !== 'boolean')
@@ -414,6 +476,9 @@ export async function updateResidentDuesAction(
 export async function updateCommunityDuesAction(data: { mode: 'Fixed' | 'PerArea'; rate: number }) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
   if (data.mode !== 'Fixed' && data.mode !== 'PerArea')
     return { error: 'Choose a valid dues method.' };
   if (!Number.isFinite(data.rate) || data.rate < 0 || data.rate > 99999999) {
@@ -443,6 +508,9 @@ export async function updateCommunityDuesAction(data: { mode: 'Fixed' | 'PerArea
 export async function setPrimaryVoterAction(propertyId: string, homeownerId: string) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
 
   const homeowner = await prisma.homeowner.findUnique({
     where: { id: homeownerId },
@@ -491,6 +559,9 @@ export async function setPrimaryVoterAction(propertyId: string, homeownerId: str
 export async function linkHomeownerToPropertyAction(propertyId: string, homeownerId: string) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
   if (typeof propertyId !== 'string' || typeof homeownerId !== 'string') {
     return { error: 'Choose a resident and property.' };
   }
@@ -512,6 +583,9 @@ export async function linkHomeownerToPropertyAction(propertyId: string, homeowne
 export async function removeHomeownerFromPropertyAction(propertyId: string, homeownerId: string) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
 
   const [property, homeowner, membership] = await Promise.all([
     prisma.property.findUnique({
@@ -562,6 +636,9 @@ export async function removeHomeownerFromPropertyAction(propertyId: string, home
 export async function toggleAdminAction(homeownerId: string) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
   if (admin.id === homeownerId) return { error: 'You cannot change your own admin status.' };
 
   const target = await prisma.homeowner.findUnique({
@@ -580,6 +657,9 @@ export async function toggleAdminAction(homeownerId: string) {
 export async function resendInviteAction(homeownerId: string) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
 
   const target = await prisma.homeowner.findUnique({ where: { id: homeownerId } });
   if (!target) return { error: 'Resident not found.' };
@@ -597,6 +677,9 @@ export async function resendInviteAction(homeownerId: string) {
 export async function revokeInviteAction(homeownerId: string) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('residents', 'admin'))) {
+    return { error: 'Resident management is currently unavailable.' };
+  }
 
   const target = await prisma.homeowner.findUnique({ where: { id: homeownerId } });
   if (!target) return { error: 'Resident not found.' };

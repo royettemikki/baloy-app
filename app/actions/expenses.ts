@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getAdminOrNull } from '@/lib/adminAuth';
 import { ExpenseCategory } from '@/constants/expenseCategories';
+import { isFeatureEnabled } from '@/lib/featureVisibility';
 
 type ExpenseInput = {
   category: ExpenseCategory;
@@ -21,6 +22,9 @@ function revalidateExpensePages() {
 export async function createExpenseAction(data: ExpenseInput) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('expenses', 'admin'))) {
+    return { error: 'Expense management is currently unavailable.' };
+  }
   if (!data.amount || data.amount <= 0) return { error: 'Enter a valid amount.' };
 
   await prisma.expense.create({
@@ -40,6 +44,9 @@ export async function createExpenseAction(data: ExpenseInput) {
 export async function updateExpenseAction(id: number, data: ExpenseInput) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('expenses', 'admin'))) {
+    return { error: 'Expense management is currently unavailable.' };
+  }
   if (!data.amount || data.amount <= 0) return { error: 'Enter a valid amount.' };
 
   await prisma.expense.update({
@@ -60,6 +67,9 @@ export async function updateExpenseAction(id: number, data: ExpenseInput) {
 export async function deleteExpenseAction(id: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('expenses', 'admin'))) {
+    return { error: 'Expense management is currently unavailable.' };
+  }
 
   await prisma.expense.delete({ where: { id } });
   revalidateExpensePages();

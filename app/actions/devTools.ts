@@ -310,11 +310,54 @@ export async function listAllResidentsAction() {
   if (!admin) return { error: 'This tool is only available in local development.' };
 
   const homeowners = await prisma.homeowner.findMany({
-    select: { id: true, fullName: true, email: true },
+    select: { id: true, fullName: true, email: true, unit: true },
     orderBy: { fullName: 'asc' },
   });
 
   return { success: true, homeowners };
+}
+
+export async function deleteResidentDevToolAction(homeownerId: string) {
+  const admin = await requireDevAdmin();
+  if (!admin) return { error: 'This tool is only available in local development.' };
+  if (typeof homeownerId !== 'string' || !homeownerId.trim()) {
+    return { error: 'Choose a resident to delete.' };
+  }
+  if (admin.id === homeownerId) {
+    return { error: 'You cannot delete the account you are currently using.' };
+  }
+
+  const resident = await prisma.homeowner.findUnique({
+    where: { id: homeownerId },
+    select: { id: true },
+  });
+  if (!resident) return { error: 'Resident not found.' };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.vote.deleteMany({ where: { homeownerId } });
+    await tx.duesCharge.deleteMany({ where: { homeownerId } });
+    await tx.payment.deleteMany({ where: { homeownerId } });
+    await tx.expenseRequest.deleteMany({ where: { homeownerId } });
+    await tx.candidacyFiling.deleteMany({ where: { homeownerId } });
+    await tx.candidate.updateMany({ where: { homeownerId }, data: { homeownerId: null } });
+    await tx.homeowner.delete({ where: { id: homeownerId } });
+  });
+
+  [
+    '/admin/invites',
+    '/admin/dues',
+    '/admin/elections',
+    '/vote',
+    '/results',
+    '/file-candidacy',
+    '/board',
+    '/board-approvals',
+    '/expense-requests',
+    '/home',
+    '/profile',
+  ].forEach((path) => revalidatePath(path));
+
+  return { success: true };
 }
 
 export async function setTestPasswordAction(homeownerId: string, newPassword: string) {

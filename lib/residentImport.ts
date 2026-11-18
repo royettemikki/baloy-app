@@ -6,6 +6,7 @@ export type ResidentImportInputRow = {
   email: string;
   unit: string;
   lotAreaSqm: string;
+  primaryOwner: string;
 };
 
 export type PreparedResidentImportRow = {
@@ -14,6 +15,7 @@ export type PreparedResidentImportRow = {
   email: string;
   unit: string;
   lotAreaSqm: number | null;
+  isPrimaryOwner: boolean;
   error: string | null;
 };
 
@@ -28,11 +30,13 @@ export function prepareResidentImportRows(
   const seenEmails = new Set<string>();
   const seenLotAreas = new Map<string, number>();
 
-  return rows.map((row) => {
+  const preparedRows = rows.map((row) => {
     const fullName = row.fullName.trim();
     const email = row.email.trim().toLowerCase();
     const unit = row.unit.trim();
     const normalizedUnit = normalizePropertyUnit(unit);
+    const primaryOwnerInput = row.primaryOwner.trim().toLowerCase();
+    const isPrimaryOwner = primaryOwnerInput === 'yes';
     const rowRequiresLotArea =
       typeof requiresLotArea === 'boolean' ? requiresLotArea : requiresLotArea.has(normalizedUnit);
     const lotAreaInput = row.lotAreaSqm.trim();
@@ -43,6 +47,8 @@ export function prepareResidentImportRows(
       error = 'Name is required and must be 120 characters or fewer.';
     } else if (!unit || unit.length > 40) {
       error = 'Unit is required and must be 40 characters or fewer.';
+    } else if (primaryOwnerInput !== 'yes' && primaryOwnerInput !== 'no') {
+      error = 'Primary Owner must be Yes or No.';
     } else if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       error = 'Enter a valid email address.';
     } else if (existingEmails.has(email)) {
@@ -87,8 +93,27 @@ export function prepareResidentImportRows(
       email,
       unit,
       lotAreaSqm: error ? null : lotAreaSqm,
+      isPrimaryOwner,
       error,
     };
+  });
+
+  const primaryOwnerCounts = new Map<string, { selected: number; validSelected: number }>();
+  for (const row of preparedRows) {
+    const normalizedUnit = normalizePropertyUnit(row.unit);
+    const counts = primaryOwnerCounts.get(normalizedUnit) ?? { selected: 0, validSelected: 0 };
+    if (row.isPrimaryOwner) {
+      counts.selected += 1;
+      if (!row.error) counts.validSelected += 1;
+    }
+    primaryOwnerCounts.set(normalizedUnit, counts);
+  }
+
+  return preparedRows.map((row) => {
+    if (row.error) return row;
+    const counts = primaryOwnerCounts.get(normalizePropertyUnit(row.unit));
+    if (counts?.selected === 1 && counts.validSelected === 1) return row;
+    return { ...row, error: 'Select exactly one valid primary owner for this unit.' };
   });
 }
 

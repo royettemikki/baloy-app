@@ -4,10 +4,14 @@ import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getAdminOrNull } from '@/lib/adminAuth';
+import { isFeatureEnabled } from '@/lib/featureVisibility';
 
 export async function confirmPaymentAction(paymentId: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('payments', 'admin'))) {
+    return { error: 'Payment management is currently unavailable.' };
+  }
 
   let confirmed: boolean;
   try {
@@ -104,6 +108,9 @@ export async function confirmPaymentAction(paymentId: number) {
 export async function rejectPaymentAction(paymentId: number, reason: string) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('payments', 'admin'))) {
+    return { error: 'Payment management is currently unavailable.' };
+  }
   if (!reason?.trim()) return { error: 'A reason is required.' };
 
   const result = await prisma.payment.updateMany({

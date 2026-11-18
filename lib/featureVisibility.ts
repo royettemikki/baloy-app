@@ -33,12 +33,19 @@ export async function getEnabledFeatureKeys(audience: FeatureAudience): Promise<
   ).map((feature) => feature.key);
 }
 
-export async function requireFeatureEnabled(key: FeatureKey, audience: FeatureAudience) {
+export async function isFeatureEnabled(
+  key: FeatureKey,
+  audience: FeatureAudience,
+): Promise<boolean> {
   const feature = FEATURE_VISIBILITY.find((item) => item.key === key);
-  if (!feature?.[audience]) redirect(audience === 'admin' ? '/admin' : '/home');
+  if (!feature?.[audience]) return false;
 
   const row = await prisma.appFeatureVisibility.findUnique({ where: { key } });
-  if (row && !row[audience === 'admin' ? 'adminEnabled' : 'residentEnabled']) {
+  return row ? row[audience === 'admin' ? 'adminEnabled' : 'residentEnabled'] : true;
+}
+
+export async function requireFeatureEnabled(key: FeatureKey, audience: FeatureAudience) {
+  if (!(await isFeatureEnabled(key, audience))) {
     redirect(audience === 'admin' ? '/admin' : '/home');
   }
 }

@@ -11,6 +11,7 @@ import {
   sendTestReminderAction,
   runReminderCheckNowAction,
   listAllResidentsAction,
+  deleteResidentDevToolAction,
   setTestPasswordAction,
   updateFeatureVisibilityAction,
 } from '@/app/actions/devTools';
@@ -25,7 +26,13 @@ import type {
 
 type ToolKey = 'election' | 'announcements' | 'duesAdd' | 'duesReset';
 
-const TOOLS: { key: ToolKey; title: string; description: string; danger: string }[] = [
+const TOOLS: {
+  key: ToolKey;
+  title: string;
+  description: string;
+  danger: string;
+  destructive: boolean;
+}[] = [
   {
     key: 'election',
     title: 'Reset election data',
@@ -33,12 +40,14 @@ const TOOLS: { key: ToolKey; title: string; description: string; danger: string 
       'Deletes all elections, ballots, votes, positions, candidates, slates, filings, and expense requests. No draft or sample election is recreated.',
     danger:
       'This permanently deletes all election history and pending election-related requests. Residents, dues, announcements, and logged expenses are preserved.',
+    destructive: true,
   },
   {
     key: 'announcements',
     title: 'Reseed announcements',
     description: 'Wipes all announcements and replaces them with four sample notices.',
     danger: 'This permanently deletes all current announcements.',
+    destructive: true,
   },
   {
     key: 'duesAdd',
@@ -46,6 +55,7 @@ const TOOLS: { key: ToolKey; title: string; description: string; danger: string 
     description:
       'Adds a standard 5-charge history for any resident who has no dues charges yet. Skips anyone who already has some.',
     danger: 'This does not delete anything — safe to run anytime.',
+    destructive: false,
   },
   {
     key: 'duesReset',
@@ -53,8 +63,18 @@ const TOOLS: { key: ToolKey; title: string; description: string; danger: string 
     description:
       'Wipes every dues charge and payment for every resident, then reseeds the standard 5-charge history fresh for everyone.',
     danger: 'This permanently deletes all current dues and payment data, for every resident.',
+    destructive: true,
   },
 ];
+
+function SectionHeading({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="mb-4">
+      <h2 className="text-base font-semibold text-ink">{title}</h2>
+      <p className="mt-1 text-xs leading-relaxed text-ink-muted">{description}</p>
+    </div>
+  );
+}
 
 const ACTIONS: Record<ToolKey, () => Promise<any>> = {
   election: resetElectionDataAction,
@@ -92,12 +112,18 @@ function FeatureVisibilitySection({
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
-      <p className="mb-1 text-sm font-medium">Feature visibility</p>
-      <p className="mb-4 text-xs text-ink-soft">
-        Turn features on or off separately for admins and residents. Hidden features are removed
-        from navigation and blocked when opened directly.
-      </p>
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-ink">Feature visibility</p>
+          <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+            Control which features admins and residents can access.
+          </p>
+        </div>
+        <span className="rounded-full bg-surface-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+          Access
+        </span>
+      </div>
       {message && (
         <p role="alert" className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
           {message}
@@ -166,49 +192,73 @@ function SeedToolsSection() {
       }
       setMessage(
         'seededCount' in result
-          ? `Done — seeded dues for ${result.seededCount} resident(s).`
-          : 'Done.',
+          ? `Added dues history for ${result.seededCount} resident(s) without existing charges.`
+          : key === 'election'
+            ? 'Election data cleared.'
+            : key === 'announcements'
+              ? 'Announcements replaced with sample notices.'
+              : 'Dues and payments reset; sample dues history added.',
       );
       router.refresh();
     });
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="grid gap-3 md:grid-cols-2">
       {message && (
         <p className="rounded-lg bg-brand-soft px-3 py-2 text-sm text-brand-strong">{message}</p>
       )}
 
       {TOOLS.map((tool) => (
-        <div key={tool.key} className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
-          <p className="mb-1 text-sm font-medium">{tool.title}</p>
-          <p className="mb-3 text-xs text-ink-soft">{tool.description}</p>
+        <div
+          key={tool.key}
+          className={`rounded-2xl border bg-surface p-5 shadow-sm ${
+            tool.destructive ? 'border-danger/20' : 'border-line'
+          }`}
+        >
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <p className="text-sm font-semibold text-ink">{tool.title}</p>
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                tool.destructive ? 'bg-danger-soft text-danger' : 'bg-brand-soft text-brand-strong'
+              }`}
+            >
+              {tool.destructive ? 'Destructive' : 'Non-destructive'}
+            </span>
+          </div>
+          <p className="mb-4 text-xs leading-relaxed text-ink-soft">{tool.description}</p>
 
           {confirming === tool.key ? (
-            <div>
-              <p className="mb-2 text-xs text-danger">{tool.danger} Are you sure?</p>
-              <div className="flex gap-2">
+            <div className="bg-danger-soft/60 rounded-xl p-3">
+              <p className="mb-3 text-xs leading-relaxed text-danger">
+                {tool.danger} Are you sure you want to continue?
+              </p>
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setConfirming(null)}
-                  className="flex-1 rounded-lg border border-line py-2 text-xs font-medium text-ink-soft"
+                  className="min-w-24 flex-1 rounded-lg border border-line bg-surface py-2 text-xs font-medium text-ink-soft"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => runTool(tool.key)}
                   disabled={pending}
-                  className="flex-1 rounded-lg bg-danger py-2 text-xs font-medium text-surface disabled:opacity-60"
+                  className="min-w-32 flex-1 rounded-lg bg-danger py-2 text-xs font-semibold text-surface disabled:opacity-60"
                 >
-                  {pending ? 'Running…' : 'Yes, run it'}
+                  {pending ? 'Working…' : 'Confirm action'}
                 </button>
               </div>
             </div>
           ) : (
             <button
               onClick={() => setConfirming(tool.key)}
-              className="rounded-lg border border-line px-4 py-2 text-xs font-medium text-brand-strong"
+              className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${
+                tool.destructive
+                  ? 'border-danger/30 border text-danger hover:bg-danger-soft'
+                  : 'border border-line text-brand-strong hover:bg-brand-soft'
+              }`}
             >
-              Run
+              {tool.destructive ? 'Review action' : 'Run tool'}
             </button>
           )}
         </div>
@@ -267,13 +317,10 @@ function SmsTestSection() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
-        <p className="mb-1 text-sm font-medium">Send a test reminder SMS</p>
-        <p className="mb-3 text-xs text-ink-soft">
-          Picks a resident, builds a real reminder message, and sends it through whichever provider
-          is currently configured (
-          <code className="rounded bg-surface-muted px-1">SMS_PROVIDER</code>). Uses their real next
-          Due charge if one exists, otherwise a labeled sample.
+      <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
+        <p className="mb-1 text-sm font-semibold text-ink">Send a test reminder</p>
+        <p className="mb-4 text-xs leading-relaxed text-ink-soft">
+          Sends through the configured SMS provider to the selected resident’s phone number.
         </p>
 
         <div className="mb-3 flex gap-2">
@@ -292,9 +339,9 @@ function SmsTestSection() {
           <button
             onClick={handleSendTest}
             disabled={!selectedId || pending}
-            className="rounded-lg bg-brand px-4 py-2 text-xs font-medium text-on-brand disabled:opacity-60"
+            className="rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-on-brand disabled:opacity-60"
           >
-            {pending ? 'Sending…' : 'Send test'}
+            {pending ? 'Sending…' : 'Send SMS'}
           </button>
         </div>
 
@@ -310,16 +357,15 @@ function SmsTestSection() {
         )}
       </div>
 
-      <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
-        <p className="mb-1 text-sm font-medium">Run the real reminder check now</p>
-        <p className="mb-3 text-xs text-ink-soft">
-          Runs the exact same logic the daily cron job uses — finds every charge due in 3 days that
-          hasn't been reminded yet, and sends/skips accordingly.
+      <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
+        <p className="mb-1 text-sm font-semibold text-ink">Run scheduled reminder check</p>
+        <p className="mb-4 text-xs leading-relaxed text-ink-soft">
+          Runs the daily job now for charges due in 3 days that haven’t been reminded.
         </p>
         <button
           onClick={handleRunCheck}
           disabled={pending}
-          className="mb-3 rounded-lg border border-line px-4 py-2 text-xs font-medium text-brand-strong"
+          className="mb-3 rounded-lg border border-line px-4 py-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft"
         >
           {pending ? 'Running…' : 'Run check'}
         </button>
@@ -373,16 +419,15 @@ function LateFeeTestSection() {
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
-      <p className="mb-1 text-sm font-medium">Run the late fee check now</p>
-      <p className="mb-3 text-xs text-ink-soft">
-        Finds every charge past its due date with no fee applied yet, adds the configured late fee,
-        and marks the original charge Overdue.
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
+      <p className="mb-1 text-sm font-semibold text-ink">Run late-fee check</p>
+      <p className="mb-4 text-xs leading-relaxed text-ink-soft">
+        Applies configured fees to overdue charges that haven’t had a fee applied yet.
       </p>
       <button
         onClick={handleRun}
         disabled={pending}
-        className="mb-3 rounded-lg border border-line px-4 py-2 text-xs font-medium text-brand-strong"
+        className="mb-3 rounded-lg border border-line px-4 py-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft"
       >
         {pending ? 'Running…' : 'Run check'}
       </button>
@@ -440,10 +485,10 @@ function SetPasswordSection() {
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
-      <p className="mb-1 text-sm font-medium">Set a resident's password</p>
-      <p className="mb-3 text-xs text-ink-soft">
-        For logging into a test account when you don't know its password — this only works locally.
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
+      <p className="mb-1 text-sm font-semibold text-ink">Set a test password</p>
+      <p className="mb-4 text-xs leading-relaxed text-ink-soft">
+        Update a resident’s password to sign in to a local test account.
       </p>
 
       <div className="mb-2 flex flex-col gap-2 sm:flex-row">
@@ -469,7 +514,7 @@ function SetPasswordSection() {
         <button
           onClick={handleSet}
           disabled={!selectedId || !password || pending}
-          className="rounded-lg bg-brand px-4 py-2 text-xs font-medium text-on-brand disabled:opacity-60"
+          className="rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-on-brand disabled:opacity-60"
         >
           {pending ? 'Setting…' : 'Set password'}
         </button>
@@ -481,33 +526,178 @@ function SetPasswordSection() {
   );
 }
 
+function DeleteResidentSection() {
+  const [residents, setResidents] = useState<
+    { id: string; fullName: string; email: string; unit: string }[]
+  >([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  useEffect(() => {
+    listAllResidentsAction().then((result) => {
+      if ('success' in result && result.success) {
+        setResidents(result.homeowners ?? []);
+      }
+    });
+  }, []);
+
+  function handleDelete() {
+    if (!selectedId) return;
+    setError(null);
+    setMessage(null);
+    startTransition(async () => {
+      const result = await deleteResidentDevToolAction(selectedId);
+      if (result.error) {
+        setError(result.error);
+        setConfirming(false);
+        return;
+      }
+
+      setResidents((current) => current.filter((resident) => resident.id !== selectedId));
+      setSelectedId('');
+      setConfirming(false);
+      setMessage('Resident and their linked test data were deleted.');
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="border-danger/30 bg-danger-soft/20 rounded-2xl border p-5 shadow-sm sm:p-6">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-ink">Delete a resident</p>
+        <span className="rounded-full bg-danger-soft px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-danger">
+          Permanent
+        </span>
+      </div>
+      <p className="mb-4 text-xs leading-relaxed text-ink-soft">
+        Removes the resident and their linked activity. Candidate records are kept but unlinked.
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <select
+          value={selectedId}
+          onChange={(event) => {
+            setSelectedId(event.target.value);
+            setConfirming(false);
+            setError(null);
+            setMessage(null);
+          }}
+          className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
+        >
+          <option value="">Choose resident by name, unit, or email…</option>
+          {residents.map((resident) => (
+            <option key={resident.id} value={resident.id}>
+              {resident.fullName} — {resident.unit} ({resident.email})
+            </option>
+          ))}
+        </select>
+        {!confirming ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setMessage(null);
+              setConfirming(true);
+            }}
+            disabled={!selectedId || pending}
+            className="rounded-lg bg-danger px-4 py-2 text-xs font-medium text-surface disabled:opacity-60"
+          >
+            Delete resident
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={pending}
+              className="rounded-lg border border-line px-4 py-2 text-xs font-medium text-ink-soft"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={pending}
+              className="rounded-lg bg-danger px-4 py-2 text-xs font-medium text-surface disabled:opacity-60"
+            >
+              {pending ? 'Deleting…' : 'Confirm delete'}
+            </button>
+          </div>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-danger">
+          {error}
+        </p>
+      )}
+      {message && <p className="mt-2 text-xs text-brand-strong">{message}</p>}
+    </div>
+  );
+}
+
 export default function DevToolsPanel({
   featureSettings,
 }: {
   featureSettings: FeatureVisibilityState;
 }) {
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <p className="mb-3 text-sm font-medium text-ink-soft">Feature controls</p>
+    <div className="space-y-8">
+      <nav
+        aria-label="Dev tools categories"
+        className="flex gap-2 overflow-x-auto rounded-2xl border border-line bg-surface p-2 shadow-sm"
+      >
+        {[
+          ['features', 'Feature access'],
+          ['tests', 'Test workflows'],
+          ['data', 'Sample data'],
+          ['accounts', 'Test accounts'],
+        ].map(([id, label]) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            className="shrink-0 rounded-xl px-3 py-2 text-xs font-semibold text-ink-soft transition-colors hover:bg-brand-soft hover:text-brand-strong"
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
+      <section id="features" className="scroll-mt-6">
+        <SectionHeading
+          title="Feature access"
+          description="Choose which features are available in the admin and resident experience."
+        />
         <FeatureVisibilitySection initialSettings={featureSettings} />
-      </div>
-      <div>
-        <p className="mb-3 text-sm font-medium text-ink-soft">SMS reminders</p>
-        <SmsTestSection />
-      </div>
-      <div>
-        <p className="mb-3 text-sm font-medium text-ink-soft">Seed data</p>
+      </section>
+      <section id="tests" className="scroll-mt-6">
+        <SectionHeading
+          title="Test workflows"
+          description="Send a sample notification or run scheduled billing checks on demand."
+        />
+        <div className="grid gap-3 lg:grid-cols-2">
+          <SmsTestSection />
+          <LateFeeTestSection />
+        </div>
+      </section>
+      <section id="data" className="scroll-mt-6">
+        <SectionHeading
+          title="Sample data"
+          description="Populate scenarios for testing. Actions marked destructive erase existing data."
+        />
         <SeedToolsSection />
-      </div>
-      <div>
-        <p className="mb-3 text-sm font-medium text-ink-soft">Late fees</p>
-        <LateFeeTestSection />
-      </div>
-      <div>
-        <p className="mb-3 text-sm font-medium text-ink-soft">Accounts</p>
-        <SetPasswordSection />
-      </div>
+      </section>
+      <section id="accounts" className="scroll-mt-6">
+        <SectionHeading
+          title="Test accounts"
+          description="Prepare resident accounts for login testing or clean up test residents."
+        />
+        <div className="grid gap-3 lg:grid-cols-2">
+          <SetPasswordSection />
+          <DeleteResidentSection />
+        </div>
+      </section>
     </div>
   );
 }

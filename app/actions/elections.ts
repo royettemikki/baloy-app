@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { getAdminOrNull } from '@/lib/adminAuth';
 import { isVotingOpen } from '@/lib/electionWindows';
 import { STANDARD_POSITION_TEMPLATE } from '@/constants/positionTemplates';
+import { isFeatureEnabled } from '@/lib/featureVisibility';
 
 async function getBallotStructureLockError(electionId: number) {
   const election = await prisma.election.findUnique({
@@ -27,6 +28,9 @@ export async function castBallotAction(
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id;
   if (!homeownerId) return { error: 'You must be signed in.' };
+  if (!(await isFeatureEnabled('elections', 'resident'))) {
+    return { error: 'Elections are currently unavailable.' };
+  }
   if (!Number.isSafeInteger(voterId) || voterId <= 0) {
     return { error: 'The voter selection is invalid.' };
   }
@@ -175,6 +179,9 @@ export async function setElectionProxyAction(electionId: number, proxyId: string
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id as string | undefined;
   if (!homeownerId) return { error: 'You must be signed in.' };
+  if (!(await isFeatureEnabled('elections', 'resident'))) {
+    return { error: 'Elections are currently unavailable.' };
+  }
   if (!Number.isSafeInteger(electionId) || electionId <= 0) {
     return { error: 'The election selection is invalid.' };
   }
@@ -225,6 +232,9 @@ export async function setElectionProxyAction(electionId: number, proxyId: string
 export async function linkCandidateAction(candidateId: number, homeownerId: string | null) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
 
   const candidate = await prisma.candidate.findUnique({
     where: { id: candidateId },
@@ -247,6 +257,9 @@ export async function createElectionAction(
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
   if (!title.trim()) return { error: 'Title is required.' };
   if (!filingDurationHours || filingDurationHours <= 0)
     return { error: 'Filing period must be greater than 0 hours.' };
@@ -265,6 +278,9 @@ export async function createElectionAction(
 export async function createPositionAction(electionId: number, title: string, seats: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
   if (!title.trim()) return { error: 'Position title is required.' };
   if (!Number.isSafeInteger(seats) || seats < 1 || seats > 100) {
     return { error: 'Enter a whole number of seats between 1 and 100.' };
@@ -285,6 +301,9 @@ export async function createCandidateFromAccountAction(
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
   if (!Number.isSafeInteger(ballotNumber) || ballotNumber < 1) {
     return { error: 'Ballot number must be a positive whole number.' };
   }
@@ -326,6 +345,9 @@ export async function createCandidateFromAccountAction(
 export async function updatePositionAction(positionId: number, title: string, seats: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
   if (!title.trim()) return { error: 'Position title is required.' };
   if (!Number.isSafeInteger(seats) || seats < 1 || seats > 100) {
     return { error: 'Enter a whole number of seats between 1 and 100.' };
@@ -350,6 +372,9 @@ export async function updatePositionAction(positionId: number, title: string, se
 export async function deletePositionAction(positionId: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
 
   const position = await prisma.position.findUnique({
     where: { id: positionId },
@@ -373,6 +398,9 @@ export async function deletePositionAction(positionId: number) {
 export async function applyPositionTemplateAction(electionId: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
   const lockError = await getBallotStructureLockError(electionId);
   if (lockError) return { error: lockError };
 
@@ -398,6 +426,9 @@ export async function applyPositionTemplateAction(electionId: number) {
 export async function startFilingAction(electionId: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
 
   const election = await prisma.election.findUnique({ where: { id: electionId } });
   if (!election) return { error: 'Election not found.' };
@@ -422,6 +453,9 @@ export async function startFilingAction(electionId: number) {
 export async function startVotingAction(electionId: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
 
   const election = await prisma.election.findUnique({ where: { id: electionId } });
   if (!election) return { error: 'Election not found.' };
@@ -494,6 +528,9 @@ export async function startVotingAction(electionId: number) {
 export async function endVotingAction(electionId: number) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
 
   const election = await prisma.election.findUnique({ where: { id: electionId } });
   if (!election) return { error: 'Election not found.' };

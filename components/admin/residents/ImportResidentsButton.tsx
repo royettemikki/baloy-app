@@ -77,7 +77,8 @@ export default function ImportResidentsButton({
     const emailIndex = headers.indexOf('email');
     const unitIndex = headers.indexOf('unit');
     const lotAreaIndex = headers.indexOf('lotareasqm');
-    const knownHeaders = new Set(['fullname', 'email', 'unit', 'lotareasqm']);
+    const primaryOwnerIndex = headers.indexOf('primaryowner');
+    const knownHeaders = new Set(['fullname', 'email', 'unit', 'lotareasqm', 'primaryowner']);
 
     if (headers.some((header) => !header)) {
       setError('Every CSV column needs a header.');
@@ -93,9 +94,9 @@ export default function ImportResidentsButton({
       );
       return;
     }
-    if (fullNameIndex < 0 || emailIndex < 0 || unitIndex < 0) {
+    if (fullNameIndex < 0 || emailIndex < 0 || unitIndex < 0 || primaryOwnerIndex < 0) {
       setError(
-        'Required columns are Full Name, Email, and Unit. Lot Area Sqm is optional unless dues are area-based.',
+        'Required columns are Full Name, Email, Unit, and Primary Owner. Lot Area Sqm is optional unless dues are area-based.',
       );
       return;
     }
@@ -118,6 +119,7 @@ export default function ImportResidentsButton({
       email: row[emailIndex] ?? '',
       unit: row[unitIndex] ?? '',
       lotAreaSqm: lotAreaIndex < 0 ? '' : (row[lotAreaIndex] ?? ''),
+      primaryOwner: row[primaryOwnerIndex] ?? '',
     }));
 
     startTransition(async () => {
@@ -142,6 +144,7 @@ export default function ImportResidentsButton({
             email: row.email,
             unit: row.unit,
             lotAreaSqm: row.lotAreaSqm === null ? '' : String(row.lotAreaSqm),
+            primaryOwner: row.isPrimaryOwner ? 'Yes' : 'No',
           })),
       );
       if (result.error) {
@@ -217,15 +220,15 @@ export default function ImportResidentsButton({
               </p>
               <p className="mt-2 text-xs leading-relaxed text-ink-soft">
                 Residents with the same unit are linked to one property and share its dues history.
-                Link each property member and choose its primary owner from the resident actions
-                after importing.
+                Use Yes for exactly one resident per unit in the Primary Owner column; mark all
+                other residents in that unit No.
               </p>
               <button
                 type="button"
                 onClick={() =>
                   downloadCsv(
                     'resident-import-template.csv',
-                    ['Full Name', 'Email', 'Unit', 'Lot Area Sqm'],
+                    ['Full Name', 'Email', 'Unit', 'Lot Area Sqm', 'Primary Owner'],
                     [],
                   )
                 }
@@ -243,7 +246,7 @@ export default function ImportResidentsButton({
                 {fileName || 'Choose a resident CSV'}
               </span>
               <span className="mt-1 text-[11px] text-ink-muted">
-                Full Name, Email, Unit, Lot Area Sqm · up to 500 residents · 1 MB max
+                Full Name, Email, Unit, Primary Owner, Lot Area Sqm · up to 500 residents · 1 MB max
               </span>
               <input
                 ref={fileInputRef}
@@ -300,12 +303,13 @@ export default function ImportResidentsButton({
                   </span>
                 </div>
                 <div className="max-h-[42vh] overflow-auto rounded-xl border border-line">
-                  <table className="w-full min-w-[560px] text-left text-xs">
+                  <table className="w-full min-w-[620px] text-left text-xs">
                     <thead className="sticky top-0 bg-surface-muted text-[10px] uppercase tracking-wide text-ink-muted">
                       <tr>
                         <th className="px-3 py-2 font-semibold">Row</th>
                         <th className="px-3 py-2 font-semibold">Resident</th>
                         <th className="px-3 py-2 font-semibold">Unit</th>
+                        <th className="px-3 py-2 font-semibold">Primary owner</th>
                         <th className="px-3 py-2 font-semibold">Status</th>
                       </tr>
                     </thead>
@@ -318,6 +322,9 @@ export default function ImportResidentsButton({
                             <p className="text-[10px] text-ink-muted">{row.email || 'No email'}</p>
                           </td>
                           <td className="px-3 py-2 text-ink-soft">{row.unit || '—'}</td>
+                          <td className="px-3 py-2 text-ink-soft">
+                            {row.isPrimaryOwner ? 'Yes' : 'No'}
+                          </td>
                           <td className="max-w-[220px] px-3 py-2">
                             {row.error ? (
                               <span className="text-[10px] text-danger">{row.error}</span>

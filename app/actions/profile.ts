@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isFeatureEnabled } from '@/lib/featureVisibility';
 
 const MAX_AVATAR_SIZE = 700 * 1024;
 const PHONE_NUMBER_PATTERN = /^\d*$/;
@@ -14,6 +15,9 @@ export async function updateProfileAction(formData: FormData) {
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id;
   if (!homeownerId) return { error: 'You must be signed in.' };
+  if (!(await isFeatureEnabled('profile', 'resident'))) {
+    return { error: 'Profile settings are currently unavailable.' };
+  }
 
   const fullName = String(formData.get('fullName') ?? '').trim();
   const phoneNumber = String(formData.get('phoneNumber') ?? '').trim();
@@ -41,11 +45,10 @@ export async function updateProfileAction(formData: FormData) {
 
   let avatarUrl: string | null | undefined;
   if (avatar instanceof File && avatar.size > 0) {
-    const blob = await put(
-      `profile-photos/${homeownerId}/${randomUUID()}.jpg`,
-      avatar,
-      { access: 'public', contentType: avatar.type },
-    );
+    const blob = await put(`profile-photos/${homeownerId}/${randomUUID()}.jpg`, avatar, {
+      access: 'public',
+      contentType: avatar.type,
+    });
     avatarUrl = blob.url;
   } else if (formData.get('removeAvatar') === 'true') {
     avatarUrl = null;

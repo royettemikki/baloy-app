@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { getCommitteeMemberships } from '@/lib/electionWinners';
 import { ExpenseCategory } from '@/constants/expenseCategories';
 import { hasApprovalAuthority } from '@/lib/electionWinners';
+import { isFeatureEnabled } from '@/lib/featureVisibility';
 
 export async function createExpenseRequestAction(data: {
   positionId: number;
@@ -18,6 +19,9 @@ export async function createExpenseRequestAction(data: {
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id;
   if (!homeownerId) return { error: 'You must be signed in.' };
+  if (!(await isFeatureEnabled('expenses', 'resident'))) {
+    return { error: 'Expense requests are currently unavailable.' };
+  }
   if (!data.amount || data.amount <= 0) return { error: 'Enter a valid amount.' };
   if (!data.justification?.trim()) return { error: 'Please explain why this expense is needed.' };
 
@@ -44,6 +48,9 @@ export async function approveExpenseRequestAction(requestId: number) {
   const session = await getServerSession(authOptions);
   const reviewerId = (session?.user as any)?.id;
   if (!reviewerId) return { error: 'You must be signed in.' };
+  if (!(await isFeatureEnabled('board', 'resident'))) {
+    return { error: 'Board approvals are currently unavailable.' };
+  }
 
   const authorized = await hasApprovalAuthority(reviewerId);
   if (!authorized) return { error: 'You do not have permission to do this.' };
@@ -92,6 +99,9 @@ export async function rejectExpenseRequestAction(requestId: number, reason: stri
   const session = await getServerSession(authOptions);
   const reviewerId = (session?.user as any)?.id;
   if (!reviewerId) return { error: 'You must be signed in.' };
+  if (!(await isFeatureEnabled('board', 'resident'))) {
+    return { error: 'Board approvals are currently unavailable.' };
+  }
 
   const authorized = await hasApprovalAuthority(reviewerId);
   if (!authorized) return { error: 'You do not have permission to do this.' };

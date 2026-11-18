@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Board-ready presentation and guided demo of Baloy's community election workflow."
+    />
+    <title>Baloy | Board Election Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #657187;
+        --brand: #285d52;
+        --brand-dark: #19463e;
+        --mint: #e5f2ec;
+        --paper: #f5f7f5;
+        --line: #dce4df;
+        --gold: #c29139;
+        --white: #fff;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #e9eeeb;
+        color: var(--ink);
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+      }
+      button { font: inherit; }
+      .stage {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 28px 28px 90px;
+      }
+      .slide {
+        display: none;
+        position: relative;
+        width: min(1120px, calc(100vw - 56px));
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        padding: clamp(36px, 5vw, 72px);
+        background: var(--white);
+        border: 1px solid rgba(23, 32, 51, .06);
+        border-radius: 20px;
+        box-shadow: 0 24px 70px rgba(27, 48, 41, .14);
+      }
+      .slide.active { display: flex; flex-direction: column; }
+      .slide.dark { background: var(--brand-dark); color: var(--white); }
+      .slide.dark .eyebrow, .slide.dark .subtle { color: #c1d9d0; }
+      .slide.dark .footer { color: #b7cdc5; border-color: rgba(255,255,255,.2); }
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--brand);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+      }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 {
+        max-width: 800px;
+        margin-bottom: 20px;
+        font-size: clamp(38px, 5vw, 68px);
+        line-height: 1.04;
+        letter-spacing: -.045em;
+      }
+      h2 {
+        max-width: 900px;
+        margin-bottom: 24px;
+        font-size: clamp(30px, 3.2vw, 44px);
+        line-height: 1.08;
+        letter-spacing: -.035em;
+      }
+      h3 { margin-bottom: 8px; font-size: 19px; }
+      p, li { font-size: clamp(15px, 1.45vw, 19px); line-height: 1.5; }
+      .subtitle {
+        max-width: 680px;
+        color: var(--muted);
+        font-size: clamp(18px, 1.8vw, 24px);
+        line-height: 1.45;
+      }
+      .subtle { color: var(--muted); }
+      .brand-mark {
+        display: inline-flex;
+        width: 52px;
+        height: 52px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: auto;
+        border: 1px solid rgba(255,255,255,.3);
+        border-radius: 16px;
+        background: rgba(255,255,255,.12);
+        color: white;
+        font-size: 20px;
+        font-weight: 800;
+      }
+      .cover-copy { margin-top: auto; }
+      .cover-accent {
+        position: absolute;
+        right: -85px;
+        top: 90px;
+        width: 360px;
+        height: 360px;
+        border: 1px solid rgba(255,255,255,.18);
+        border-radius: 50%;
+        box-shadow: 0 0 0 34px rgba(255,255,255,.035), 0 0 0 70px rgba(255,255,255,.025);
+      }
+      .pill {
+        display: inline-block;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--brand);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .grid { display: grid; gap: 16px; }
+      .grid.two { grid-template-columns: repeat(2, 1fr); }
+      .grid.three { grid-template-columns: repeat(3, 1fr); }
+      .card {
+        padding: 21px 22px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #fbfcfb;
+      }
+      .card p, .card li { margin-bottom: 0; color: var(--muted); font-size: 16px; }
+      .card .number {
+        display: flex;
+        width: 34px;
+        height: 34px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+        border-radius: 11px;
+        background: var(--mint);
+        color: var(--brand);
+        font-weight: 800;
+      }
+      .callout {
+        margin-top: auto;
+        padding: 17px 20px;
+        border-left: 4px solid var(--gold);
+        border-radius: 0 12px 12px 0;
+        background: #fbf7ef;
+        color: #554525;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+      .steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+      .steps li {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: 14px;
+        align-items: start;
+        padding: 13px 15px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fbfcfb;
+        font-size: 16px;
+      }
+      .step-no {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--brand);
+        color: white;
+        font-size: 14px;
+        font-weight: 800;
+      }
+      .steps strong { display: block; margin-bottom: 3px; }
+      .steps span.copy { color: var(--muted); line-height: 1.4; }
+      .route {
+        display: inline-block;
+        margin-top: 7px;
+        padding: 4px 8px;
+        border-radius: 7px;
+        background: var(--mint);
+        color: var(--brand-dark);
+        font-family: Consolas, monospace;
+        font-size: 12px;
+      }
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: auto;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        color: #8a94a3;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+      .demo-banner {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 13px 16px;
+        border: 1px solid #e8d9b8;
+        border-radius: 12px;
+        background: #fbf7ef;
+        color: #694f20;
+        font-size: 14px;
+      }
+      .demo-banner strong { white-space: nowrap; }
+      .price {
+        margin: 8px 0 10px;
+        color: var(--brand);
+        font-size: clamp(35px, 4vw, 52px);
+        font-weight: 800;
+        letter-spacing: -.04em;
+      }
+      .controls {
+        position: fixed;
+        z-index: 4;
+        right: 24px;
+        bottom: 20px;
+        left: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+      .controls button {
+        min-height: 42px;
+        padding: 0 15px;
+        border: 1px solid #ccd7d1;
+        border-radius: 11px;
+        background: white;
+        color: var(--ink);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+        box-shadow: 0 4px 14px rgba(27,48,41,.08);
+      }
+      .controls button:hover { border-color: var(--brand); color: var(--brand); }
+      #counter {
+        min-width: 62px;
+        color: #4f5c69;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .notes-panel {
+        display: none;
+        position: fixed;
+        z-index: 5;
+        right: 20px;
+        bottom: 78px;
+        width: min(440px, calc(100vw - 40px));
+        max-height: 42vh;
+        overflow: auto;
+        padding: 19px 21px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: white;
+        box-shadow: 0 16px 45px rgba(23,32,51,.18);
+      }
+      .notes-panel.open { display: block; }
+      .notes-panel h2 { margin-bottom: 8px; font-size: 18px; }
+      .notes-panel p { margin-bottom: 0; color: #4c5968; font-size: 14px; }
+      .key-hint { position: fixed; right: 25px; top: 18px; color: #778477; font-size: 11px; }
+      @media (max-width: 700px) {
+        .stage { padding: 12px 10px 76px; }
+        .slide { width: calc(100vw - 20px); aspect-ratio: auto; min-height: calc(100vh - 100px); padding: 26px 22px; border-radius: 14px; }
+        .grid.two, .grid.three { grid-template-columns: 1fr; }
+        .card { padding: 15px; }
+        .card p, .card li { font-size: 14px; }
+        .steps { gap: 8px; }
+        .steps li { padding: 10px; font-size: 14px; }
+        .cover-accent { right: -190px; top: 30px; }
+        .controls { gap: 5px; bottom: 12px; }
+        .controls button { min-height: 38px; padding: 0 10px; font-size: 12px; }
+        .key-hint { display: none; }
+      }
+      @media print {
+        @page { size: landscape; margin: 0; }
+        body { background: white; }
+        .stage { display: block; padding: 0; }
+        .slide, .slide.active {
+          display: flex !important;
+          width: 100vw;
+          height: 100vh;
+          aspect-ratio: auto;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+          break-after: page;
+          page-break-after: always;
+        }
+        .controls, .notes-panel, .key-hint { display: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="key-hint">← → navigate · N speaker notes · F print</div>
+    <main class="stage" aria-live="polite">
+      <section class="slide dark active" data-title="Cover" data-notes="Open: “Thank you for the opportunity. Today I’ll show how Baloy can support a clearer, more organized community election—from preparation through results.” Set expectation: this is a guided product demo, not a certification or legal-compliance presentation.">
+        <div class="cover-accent" aria-hidden="true"></div>
+        <div class="brand-mark">B</div>
+        <div class="cover-copy">
+          <p class="eyebrow">Board product demonstration</p>
+          <h1>A more organized community election.</h1>
+          <p class="subtitle">A guided look at election setup, candidate filing, resident voting, and results in Baloy.</p>
+          <p class="subtle" style="margin-top:30px;font-size:15px">Prepared for the Board of Directors · November 2026</p>
+        </div>
+        <div class="footer"><span>Baloy · Community operations</span><span>Formal demo</span></div>
+      </section>
+
+      <section class="slide" data-title="Purpose" data-notes="Frame value without promising an outcome: one workflow can reduce handoffs and make election status easier to follow. Ask the board what causes the most friction today: collecting candidacies, reaching residents, counting, or reporting.">
+        <p class="eyebrow">01 · Why this matters</p>
+        <h2>Make the process easier to run—and easier to follow.</h2>
+        <div class="grid three">
+          <article class="card"><div class="number">1</div><h3>One election workflow</h3><p>Set up cycles, positions, candidates, and timing in the admin election area.</p></article>
+          <article class="card"><div class="number">2</div><h3>Resident participation</h3><p>Give eligible residents an online place to review candidates and submit a ballot.</p></article>
+          <article class="card"><div class="number">3</div><h3>Clearer follow-through</h3><p>Review election activity, turnout, and results after voting closes.</p></article>
+        </div>
+        <div class="callout">Today’s goal: demonstrate the workflow and agree what a controlled pilot would need.</div>
+        <div class="footer"><span>Baloy · Election demo</span><span>Purpose</span></div>
+      </section>
+
+      <section class="slide" data-title="Agenda" data-notes="Set the pace: about 12–15 minutes for the election walkthrough, then 3 minutes for the wider-app preview and discussion. Use seeded/demo data only. Do not enter real resident credentials or real ballots during a presentation.">
+        <p class="eyebrow">02 · Today’s walkthrough</p>
+        <h2>From board preparation to the results view.</h2>
+        <div class="grid two">
+          <article class="card"><h3>Election demo · 12–15 minutes</h3><ol><li>Prepare an election</li><li>Review candidate filings</li><li>Walk through the resident ballot</li><li>Close the cycle and review results</li></ol></article>
+          <article class="card"><h3>Wider-app preview · 3 minutes</h3><ol><li>Notices and resident updates</li><li>Dues and payment history</li><li>Board expense requests and approvals</li><li>Discuss pilot scope and next steps</li></ol></article>
+        </div>
+        <div class="callout">Please treat all screens and sample records as demonstration material unless a production environment and data handling have been confirmed.</div>
+        <div class="footer"><span>Baloy · Election demo</span><span>Agenda</span></div>
+      </section>
+
+      <section class="slide" data-title="Step 1: Prepare" data-notes="Live action: sign in with the designated demo administrator and open /admin/elections. Create or open a sample election. Show title, filing/voting durations, term length, and positions. Mention position templates can speed setup. Emphasize that the election structure locks after voting starts.">
+        <p class="eyebrow">03 · Step 1 · Board/admin</p>
+        <h2>Prepare the cycle before residents are invited.</h2>
+        <ol class="steps">
+          <li><span class="step-no">1</span><span class="copy"><strong>Create the election</strong>Set the cycle title, filing window, voting window, and board term.<span class="route">/admin/elections</span></span></li>
+          <li><span class="step-no">2</span><span class="copy"><strong>Set positions and seats</strong>Add roles manually or apply the standard position template.</span></li>
+          <li><span class="step-no">3</span><span class="copy"><strong>Open candidate filing</strong>Start the filing period once positions are ready.</span></li>
+          <li><span class="step-no">4</span><span class="copy"><strong>Manage candidate records</strong>Add candidates and associate them with resident accounts as appropriate.</span></li>
+        </ol>
+        <div class="footer"><span>Baloy · Election demo</span><span>Setup</span></div>
+      </section>
+
+      <section class="slide" data-title="Step 2: Review candidacies" data-notes="Live action: open the election details and find the candidacy filings. Show how a board/admin user can review submissions and approve or reject with a reason where applicable. Explain that voting cannot start while filings are pending, and positions need candidates. Exact workflow and reviewer roles should be agreed during pilot setup.">
+        <p class="eyebrow">04 · Step 2 · Review and finalize</p>
+        <h2>Bring candidate review into the election workflow.</h2>
+        <div class="grid two">
+          <article class="card"><div class="number">A</div><h3>Review submissions</h3><p>Residents can file for an open position. Administrators can review the filing status and handle the submission.</p></article>
+          <article class="card"><div class="number">B</div><h3>Finalize the ballot</h3><p>Resolve pending filings and ensure each position has at least one candidate before opening voting.</p></article>
+        </div>
+        <div class="callout">Demo cue: show a sample filing’s status, then point out that the ballot structure is locked once voting begins.</div>
+        <div class="footer"><span>Baloy · Election demo</span><span>Candidate review</span></div>
+      </section>
+
+      <section class="slide" data-title="Step 3: Eligible voters" data-notes="Live action: start voting only in a prepared test election. Explain the current eligibility model: active primary owners are placed on the election voter roll. An eligible owner may assign an active account who is a member of their property as a proxy; that proxy submits the same owner's ballot, not an additional entitlement. Avoid calling the ballot anonymous.">
+        <p class="eyebrow">05 · Step 3 · Eligibility and access</p>
+        <h2>Make voting entitlements explicit.</h2>
+        <div class="grid two">
+          <article class="card"><h3>Voter roll</h3><p>When voting opens, the app creates a list from eligible active primary-owner accounts. The roll provides a basis for tracking participation.</p></article>
+          <article class="card"><h3>Proxy option</h3><p>An eligible owner may assign an active member of the same property to submit that owner’s ballot.</p></article>
+          <article class="card"><h3>Authorization checks</h3><p>The app checks that the ballot belongs to the election and that the submitting account is the owner or assigned proxy.</p></article>
+          <article class="card"><h3>Duplicate protection</h3><p>The submission flow prevents an already-used voter entitlement from being submitted again.</p></article>
+        </div>
+        <div class="callout">Board discussion: confirm the governing documents, voter eligibility rules, proxy policy, and voter-roll review process before a real election.</div>
+        <div class="footer"><span>Baloy · Election demo</span><span>Eligibility</span></div>
+      </section>
+
+      <section class="slide" data-title="Step 4: Cast a ballot" data-notes="Live action: sign in with a prepared demo voter or proxy, open /vote, choose the correct test entitlement, select candidates for each position, review, and submit. Explain that the app validates selections against the positions, seat counts, election window, and voter entitlement. Do not submit a real vote in a live election.">
+        <p class="eyebrow">06 · Step 4 · Resident experience</p>
+        <h2>A guided ballot, from candidate review to submission.</h2>
+        <ol class="steps">
+          <li><span class="step-no">1</span><span class="copy"><strong>Open the election</strong>The resident sees an open voting cycle and the relevant voter entitlement.<span class="route">/vote</span></span></li>
+          <li><span class="step-no">2</span><span class="copy"><strong>Review candidates</strong>Candidate cards and details help residents compare the options.</span></li>
+          <li><span class="step-no">3</span><span class="copy"><strong>Choose within the rules</strong>The ballot enforces the seats available and requires a selection for each position.</span></li>
+          <li><span class="step-no">4</span><span class="copy"><strong>Review and submit</strong>After submission, the entitlement is marked as used and the ballot is saved.</span></li>
+        </ol>
+        <div class="footer"><span>Baloy · Election demo</span><span>Resident ballot</span></div>
+      </section>
+
+      <section class="slide" data-title="Step 5: Results" data-notes="Live action: open /results using a closed seeded election. Show the candidate tally, winner indicators, turnout, and tie indication where present. Clarify that results are shown after closing, and that board procedures should define any tie resolution and official certification. Do not claim independent auditability or immutable records.">
+        <p class="eyebrow">07 · Step 5 · Close and report</p>
+        <h2>Review results and participation in one place.</h2>
+        <div class="grid three">
+          <article class="card"><div class="number">01</div><h3>Candidate totals</h3><p>Review vote counts by position and candidate.</p></article>
+          <article class="card"><div class="number">02</div><h3>Winner indicators</h3><p>See winners based on position seat counts; unresolved ties are surfaced.</p></article>
+          <article class="card"><div class="number">03</div><h3>Turnout context</h3><p>Compare submitted ballots with the eligible voter roll.</p></article>
+        </div>
+        <p class="route">/results</p>
+        <div class="callout">The Board remains responsible for confirming the official result and following its governing election procedures.</div>
+        <div class="footer"><span>Baloy · Election demo</span><span>Results</span></div>
+      </section>
+
+      <section class="slide" data-title="Wider app preview" data-notes="Keep this as a short teaser, not a second full demo. Briefly show the resident home screen, notices, dues, board page, expense-request form, and board approval list if time permits. These are currently implemented product areas; whether all are included in a customer deployment depends on configuration and agreed scope.">
+        <p class="eyebrow">08 · Sneak peek · The wider Baloy experience</p>
+        <h2>More than elections: a connected community app.</h2>
+        <div class="grid two">
+          <article class="card"><h3>Resident communication</h3><p>Notices and announcements, with resident home and profile experiences.</p></article>
+          <article class="card"><h3>Dues and payments</h3><p>View charges, outstanding balances, payment status, and receipt history.</p></article>
+          <article class="card"><h3>Board operations</h3><p>Board/officeholder views and role-aware expense request approvals.</p></article>
+          <article class="card"><h3>Community administration</h3><p>Resident accounts, election management, and operational admin tools.</p></article>
+        </div>
+        <div class="callout">Suggested next demo: a complete resident journey—notice → dues/payment history → board election → post-election board operations.</div>
+        <div class="footer"><span>Baloy · Election demo</span><span>Wider app preview</span></div>
+      </section>
+
+      <section class="slide" data-title="Responsible pilot" data-notes="Be candid: current vote records are linked to voter and candidate records in the application data model. This implementation must not be presented as an anonymous or secret-ballot system. Before any real election, agree privacy disclosures, retention/access controls, backup/recovery, security review, accessibility, legal/bylaw requirements, and a tested operations plan.">
+        <p class="eyebrow">09 · Responsible rollout</p>
+        <h2>A pilot should start with the Board’s rules and trust requirements.</h2>
+        <div class="grid two">
+          <article class="card"><h3>Confirm before a real election</h3><ul><li>Governing documents and voter/proxy eligibility</li><li>Voter-roll verification and correction process</li><li>Privacy notice, access, and retention policy</li><li>Security, backup, and recovery review</li></ul></article>
+          <article class="card"><h3>Prove in a test cycle</h3><ul><li>Sample residents and candidates</li><li>Admin rehearsal and resident usability test</li><li>Closeout, tie, and support scenarios</li><li>Written acceptance criteria and go/no-go</li></ul></article>
+        </div>
+        <div class="callout"><strong>Important:</strong> The current data model associates recorded votes with voter and candidate records. Do not describe this implementation as an anonymous/secret ballot or certified election system. Confirm privacy and governance requirements before deployment.</div>
+        <div class="footer"><span>Baloy · Election demo</span><span>Trust and readiness</span></div>
+      </section>
+
+      <section class="slide" data-title="Pilot proposal" data-notes="If asked about price, position this as a discussion estimate—not an approved quote or market benchmark. Suggested starting proposal: ₱25,000 for one election and up to 300 eligible voters, including setup, test rehearsal, admin training, and election-window support. Later cycle estimate: ₱12,000. Exclusions: hosting, SMS, payment fees, custom development, independent security/compliance review, taxes, and scope above the assumption. Confirm deployment readiness and exact scope before quoting.">
+        <p class="eyebrow">10 · Discussion · Pilot proposal</p>
+        <h2>A measured first step, with a clear scope.</h2>
+        <div class="grid two">
+          <article class="card">
+            <p class="eyebrow">Illustrative pilot estimate</p>
+            <div class="price">₱25,000</div>
+            <h3>One election · up to 300 eligible voters</h3>
+            <p>Proposed to include setup, a test rehearsal, administrator training, and support during the election window.</p>
+          </article>
+          <article class="card">
+            <p class="eyebrow">Future cycle estimate</p>
+            <div class="price">₱12,000</div>
+            <h3>Per subsequent election cycle</h3>
+            <p>Subject to the same agreed scope, deployment, support expectations, and voter limit.</p>
+          </article>
+        </div>
+        <div class="callout"><strong>For discussion only—not a formal quote.</strong> Hosting, SMS, payment fees, custom work, taxes, and independent reviews are excluded. Final price depends on verified requirements and deployment readiness.</div>
+        <div class="footer"><span>Baloy · Election demo</span><span>Proposed next step</span></div>
+      </section>
+
+      <section class="slide dark" data-title="Close" data-notes="Close: “If this workflow addresses the Board’s needs, the next step is a requirements and readiness workshop. We’ll confirm your bylaws and voter rules, privacy expectations, technical readiness, and pilot success criteria, then return with a formal scope and price.” Invite questions.">
+        <div class="brand-mark">B</div>
+        <div class="cover-copy">
+          <p class="eyebrow">The proposed next step</p>
+          <h1>Agree the rules. Rehearse the process. Then decide on a pilot.</h1>
+          <p class="subtitle">Board requirements workshop → test election → readiness review → go/no-go decision.</p>
+          <p class="subtle" style="margin-top:24px;font-size:17px">Questions and discussion</p>
+        </div>
+        <div class="footer"><span>Baloy · Community operations</span><span>Thank you</span></div>
+      </section>
+    </main>
+
+    <aside class="notes-panel" id="notes" aria-live="polite">
+      <h2 id="notes-title">Presenter notes</h2>
+      <p id="notes-copy"></p>
+    </aside>
+    <nav class="controls" aria-label="Presentation controls">
+      <button type="button" id="prev" aria-label="Previous slide">← Back</button>
+      <span id="counter" aria-live="polite"></span>
+      <button type="button" id="next" aria-label="Next slide">Next →</button>
+      <button type="button" id="notes-toggle" aria-pressed="false">Presenter notes</button>
+      <button type="button" id="print">Print / PDF</button>
+    </nav>
+    <script>
+      (() => {
+        const slides = Array.from(document.querySelectorAll(".slide"));
+        const counter = document.getElementById("counter");
+        const notes = document.getElementById("notes");
+        const notesTitle = document.getElementById("notes-title");
+        const notesCopy = document.getElementById("notes-copy");
+        const notesToggle = document.getElementById("notes-toggle");
+        let current = 0;
+
+        function show(index) {
+          current = Math.max(0, Math.min(slides.length - 1, index));
+          slides.forEach((slide, i) => slide.classList.toggle("active", i === current));
+          counter.textContent = `${current + 1} / ${slides.length}`;
+          notesTitle.textContent = slides[current].dataset.title || "Presenter notes";
+          notesCopy.textContent = slides[current].dataset.notes || "";
+          document.title = `${slides[current].dataset.title} · Baloy Board Demo`;
+          document.getElementById("prev").disabled = current === 0;
+          document.getElementById("next").disabled = current === slides.length - 1;
+        }
+
+        document.getElementById("prev").addEventListener("click", () => show(current - 1));
+        document.getElementById("next").addEventListener("click", () => show(current + 1));
+        notesToggle.addEventListener("click", () => {
+          const open = notes.classList.toggle("open");
+          notesToggle.setAttribute("aria-pressed", String(open));
+        });
+        document.getElementById("print").addEventListener("click", () => window.print());
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowRight" || event.key === " ") show(current + 1);
+          if (event.key === "ArrowLeft") show(current - 1);
+          if (event.key.toLowerCase() === "n") notesToggle.click();
+          if (event.key.toLowerCase() === "f") window.print();
+          if (event.key === "Escape") {
+            notes.classList.remove("open");
+            notesToggle.setAttribute("aria-pressed", "false");
+          }
+        });
+        show(0);
+      })();
+    </script>
+  </body>
+</html>

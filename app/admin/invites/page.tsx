@@ -81,8 +81,9 @@ export default async function InvitesPage() {
       />
       <p className="-mt-2 text-xs text-ink-muted">
         Dues settings are shared by everyone linked to a property. Link an owner to each applicable
-        property and set its primary owner from the resident actions. Monthly assessments are
-        created on the first of each month.
+        property. The first resident invited to an unassigned property becomes its primary owner;
+        CSV imports use the Primary Owner column to identify one owner per unit. Monthly assessments
+        are created on the first of each month.
       </p>
       <ResidentsTable
         homeowners={serialized}

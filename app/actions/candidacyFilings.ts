@@ -8,6 +8,7 @@ import { getAdminOrNull } from '@/lib/adminAuth';
 import { canFileForPosition, isSingleCandidacyRestrictionEnabled } from '@/lib/candidacyRules';
 import { getCurrentOfficeholders } from '@/lib/electionWinners';
 import { isFilingOpen, isVotingOpen } from '@/lib/electionWindows';
+import { isFeatureEnabled } from '@/lib/featureVisibility';
 
 export async function fileCandidacyAction(
   positionId: number,
@@ -17,6 +18,9 @@ export async function fileCandidacyAction(
   const session = await getServerSession(authOptions);
   const homeownerId = (session?.user as any)?.id;
   if (!homeownerId) return { error: 'You must be signed in.' };
+  if (!(await isFeatureEnabled('elections', 'resident'))) {
+    return { error: 'Elections are currently unavailable.' };
+  }
   if (
     preferredBallotNumber !== null &&
     (!Number.isSafeInteger(preferredBallotNumber) || preferredBallotNumber < 1)
@@ -80,6 +84,9 @@ export async function approveCandidacyFilingAction(
 ) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
   if (!Number.isSafeInteger(ballotNumber) || ballotNumber < 1) {
     return { error: 'Ballot number must be a positive whole number.' };
   }
@@ -165,6 +172,9 @@ export async function approveCandidacyFilingAction(
 export async function rejectCandidacyFilingAction(filingId: number, reason: string) {
   const admin = await getAdminOrNull();
   if (!admin) return { error: 'You do not have permission to do this.' };
+  if (!(await isFeatureEnabled('elections', 'admin'))) {
+    return { error: 'Election management is currently unavailable.' };
+  }
   if (!reason?.trim()) return { error: 'A reason is required.' };
 
   const filing = await prisma.candidacyFiling.findUnique({ where: { id: filingId } });
